@@ -1,20 +1,26 @@
 #!/usr/bin/env python2.7
 
+import signal
+signal.signal(signal.SIGINT, lambda signal, frame: sys.exit(0))
+
 import sys
 import re
 import itertools
+import logging
+import argparse
+
 import numpy as np
 from netCDF4 import Dataset
-from struct import unpack
 
 NA_INT = 1<<31
+NA_FLOAT32 = np.nan
 NA_FLOAT64 = np.nan
 
 re_line0 = re.compile('^-(?P<year>\d{4})-(?P<month>\d\d)-(?P<day>\d\d) (?P<hour>\d\d):(?P<minute>\d\d):(?P<second>\d\d)\r\n$')
-re_line1 = re.compile('^\x01CL(?P<unit>.)(?P<software_level>\d\d\d)(?P<message_number>\d)(?P<subclass>\d)\x02\r?\n?$')
-re_line2 = re.compile('^(?P<detection_status>.)(?P<self_check>.) (?P<cbh_or_vertical_visibility>.{5}) (?P<cbh2_or_highest_signal>.{5}) (?P<highest_cbh>.{5}) (?P<status_alarm>.{4})(?P<status_warning>.{4})(?P<status_internal>.{4})\r\n$')
+re_line1 = re.compile('^\x01CL(?P<unit>.)(?P<software_level>\d\d\d)(?P<message_number>\d)(?P<message_subclass>\d)\x02\r?\n?$')
+re_line2 = re.compile('^(?P<detection_status>.)(?P<self_check>.) (?P<cbh_or_vertical_visibility>.{5}) (?P<cbh2_or_highest_signal>.{5}) (?P<cbh_3>.{5}) (?P<status_alarm>.{4})(?P<status_warning>.{4})(?P<status_internal>.{4})\r\n$')
 re_line3 = re.compile('^ (?P<sky_detection_status>..) +(?P<layer1_height>.{4}) +(?P<layer2_cloud_amount>.) +(?P<layer2_height>.{4}) +(?P<layer3_cloud_amount>.) +(?P<layer3_height>.{4}) +(?P<layer4_cloud_amount>.) +(?P<layer4_height>.{4}) +(?P<layer5_cloud_amount>.) +(?P<layer5_height>.{3,4})\r\n$')
-re_line4 = re.compile('^(?P<scale>.{5}) (?P<vertical_resolution>..) (?P<nsamples>.{4}) (?P<pulse_energy>...) (?P<laser_temperature>...) (?P<window_transmission>...) (?P<tilt_angle>..) (?P<background_light>.{4}) (?P<pulse_length>.)(?P<pulse_qty>.{4})(?P<gain>.)(?P<bandwidth>.)(?P<sampling>..) (?P<backscatter_sum>...)\r\n$')
+re_line4 = re.compile('^(?P<scale>.{5}) (?P<vertical_resolution>..) (?P<nsamples>.{4}) (?P<pulse_energy>...) (?P<laser_temperature>...) (?P<window_transmission>...) (?P<tilt_angle>..) (?P<background_light>.{4}) (?P<pulse_length>.)(?P<pulse_count>.{4})(?P<receiver_gain>.)(?P<receiver_bandwidth>.)(?P<sampling>..) (?P<backscatter_sum>...)\r\n$')
 re_line5 = re.compile('^(?P<backscatter>.*)\r\n$')
 re_line6 = re.compile('^\x03(?P<checksum>.{4})\x04\r\n$')
 re_none = re.compile('^/* *$')
@@ -34,11 +40,11 @@ def read_hex(d, d2, var):
 def read_hex_array(d, d2, var, k):
     x = d[var]
     n = len(x)
-    d2[var] = np.zeros(n, dtype=int)
+    d2[var] = np.zeros(int(np.ceil(1.0*n/k)), dtype=int)
     for i in range(0, n, k):
         y = x[i:min(i + k, n)]
         z = int(y, 16)
-        d2[var][i/k] = z if z < (1<<19) else z - (1<<20)
+        d2[var][i/k] = z if z < (1<<(k*4 - 1)) else z - (1<<(k*4))
 
 def line0(s):
     m = re_line0.match(s)
@@ -63,7 +69,7 @@ def line1(s):
     read_str(d, d2, 'unit')
     read_int(d, d2, 'software_level')
     read_int(d, d2, 'message_number')
-    read_int(d, d2, 'subclass')
+    read_int(d, d2, 'message_subclass')
     return d2
 
 def line2(s):
@@ -75,7 +81,7 @@ def line2(s):
     read_str(d, d2, 'self_check')
     read_int(d, d2, 'cbh_or_vertical_visibility')
     read_int(d, d2, 'cbh2_or_highest_signal')
-    read_int(d, d2, 'highest_cbh')
+    read_int(d, d2, 'cbh_3')
     read_hex(d, d2, 'status_alarm')
     read_hex(d, d2, 'status_warning')
     read_hex(d, d2, 'status_internal')
@@ -85,12 +91,12 @@ def line2(s):
         if d2['detection_status'] == '4' \
         else NA_INT
 
-    d2['lowest_cbh'] = \
+    d2['cbh_1'] = \
         d2['cbh_or_vertical_visibility'] \
         if d2['detection_status'] in ('1', '2', '3') \
         else NA_INT
 
-    d2['second_lowest_cbh'] = \
+    d2['cbh_2'] = \
         d2['cbh2_or_highest_signal'] \
         if d2['detection_status'] in ('2', '3') \
         else NA_INT
@@ -123,6 +129,15 @@ def line3(s):
         if d2['sky_detection_status'] >= 0 and d2['sky_detection_status'] <= 8 \
         else NA_INT
 
+    if not (
+        d2['sky_detection_status'] >= 0 and
+        d2['sky_detection_status'] <= 8
+    ):
+        d2['layer2_cloud_amount'] = NA_INT
+        d2['layer3_cloud_amount'] = NA_INT
+        d2['layer4_cloud_amount'] = NA_INT
+        d2['layer5_cloud_amount'] = NA_INT
+
     return d2
 
 def line4(s):
@@ -139,9 +154,9 @@ def line4(s):
     read_int(d, d2, 'tilt_angle')
     read_int(d, d2, 'background_light')
     read_str(d, d2, 'pulse_length')
-    read_int(d, d2, 'pulse_qty')
-    read_str(d, d2, 'gain')
-    read_str(d, d2, 'bandwidth')
+    read_int(d, d2, 'pulse_count')
+    read_str(d, d2, 'receiver_gain')
+    read_str(d, d2, 'receiver_bandwidth')
     read_int(d, d2, 'backscatter_sum')
     return d2
 
@@ -168,7 +183,6 @@ def check(d):
 def postprocess(d):
     d['backscatter'] = d['backscatter']/100000.0*(d['scale']/100.0)
     d['backscatter_sum'] = d['backscatter_sum']/100000.0*(d['scale']/100.0)
-    d['height'] = np.arange(d['nsamples'])*d['vertical_resolution']
     d['layer_height'] = np.nan*np.zeros(5)
     d['layer_cloud_amount'] = np.nan*np.zeros(5)
     for i in range(5):
@@ -180,14 +194,15 @@ def postprocess(d):
     if d['units'] == 'ft':
         for var in [
             'vertical_visibility'
-            'lowest_cbh'
-            'second_lowest_cbh'
-            'highest_cbh'
+            'cbh_1'
+            'cbh_2'
+            'cbh_3'
             'vertical_resolution'
-            'height'
             'layer_height'
         ]:
             d[var] *= 0.3048
+
+    d['pulse_count'] *= 1024
 
 def crc16(buf):
     crc = 0xffff
@@ -199,7 +214,11 @@ def crc16(buf):
             crc = (crc^xmask) & 0xffff
     return crc^0xffff;
 
-def read_input(filename):
+def read_input(filename, options={}):
+    options = dict({
+        'check': False,
+    }, **options)
+
     with open(filename, 'r') as f:
         d = {}
         dd = []
@@ -246,7 +265,7 @@ def read_input(filename):
                 elif stage == 6:
                     d.update(line6(line))
                     d['message'] += line[0]
-                    # check(d)
+                    if options['check']: check(d)
                     postprocess(d)
                     dd.append(d)
                     stage = 0
@@ -264,6 +283,8 @@ def write_output(dd, filename):
     f.createDimension('time', n)
     f.createDimension('level', m)
     f.createDimension('layer', 5)
+    level = np.arange(m)
+    layer = np.arange(5)
 
     def write_var(var, dtype, attributes={}):
         if not var in vars: return
@@ -278,7 +299,8 @@ def write_output(dd, filename):
         if not var in vars: return
         fill_value = {
             'i4': NA_INT,
-            'f8': NA_FLOAT64
+            'f4': NA_FLOAT32,
+            'f8': NA_FLOAT64,
         }.get(dtype)
         v = f.createVariable(var, dtype, ('time', 'level'), fill_value=fill_value)
         for i, d in enumerate(dd):
@@ -290,7 +312,8 @@ def write_output(dd, filename):
         if not var in vars: return
         fill_value = {
             'i4': NA_INT,
-            'f8': NA_FLOAT64
+            'f4': NA_FLOAT32,
+            'f8': NA_FLOAT64,
         }.get(dtype)
         v = f.createVariable(var, dtype, ('time', 'layer'), fill_value=fill_value)
         for i, d in enumerate(dd):
@@ -298,14 +321,22 @@ def write_output(dd, filename):
             v[i, 0:len(x)] = x
         v.setncatts(attributes)
 
+    def write_dim(var, dtype, x, attributes={}):
+        v = f.createVariable(var, dtype, (var,))
+        v[:] = x
+        v.setncatts(attributes)
+
     write_var('time', 'S19', {
         'long_name': 'Time',
         'units': 'ISO 8601',
     })
-    write_var('level', 'i4', {
-        'long_name': 'Level',
+    write_dim('level', 'i4', level, {
+        'long_name': 'Level number',
     })
-    write_profile('backscatter', 'f8', {
+    write_dim('layer', 'i4', layer, {
+        'long_name': 'Layer number',
+    })
+    write_profile('backscatter', 'f4', {
         'long_name': 'Attenuated volume backscatter coefficient',
         'units': 'km^-1.sr^-1',
     })
@@ -317,31 +348,35 @@ def write_output(dd, filename):
     })
     write_var('message_number', 'i4', {
         'long_name': 'Message number',
+        'flag_values': '1, 2',
+        'flag_meanings': 'message_without_sky_condition_data message_with_sky_condition_data'
     })
-    write_var('subclass', 'i4', {
+    write_var('message_subclass', 'i4', {
         'long_name': 'Message subclass',
     })
     write_var('detection_status', 'S1', {
         'long_name': 'Detection status',
+        'flag_values': '0, 1, 2, 3, 4, 5, /',
+        'flag_meanings': 'no_significant_backscatter one_cloud_base_detected two_cloud_bases_detected three_cloud_bases_detected full_obscuration_determined_but_no_cloud_base_detected some_obscuration_detected_but_determined_to_be_transparent raw_data_input_to_algorithm_missing_or_suspect',
     })
     write_var('self_check', 'S1', {
         'long_name': 'Self check',
         'flag_values': '0, W, A',
-        'flag_meanings': 'self_check_ok, warning_active, alarm_active',
+        'flag_meanings': 'self_check_ok warning_active alarm_active',
     })
     write_var('vertical_visibility', 'i4', {
         'long_name': 'Vertical visibility',
         'units': 'm',
     })
-    write_var('lowest_cbh', 'i4', {
+    write_var('cbh_1', 'i4', {
         'long_name': 'Lowest cloud base height',
         'units': 'm',
     })
-    write_var('second_lowest_cbh', 'i4', {
+    write_var('cbh_2', 'i4', {
         'long_name': 'Second lowest cloud base height',
         'units': 'm',
     })
-    write_var('highest_cbh', 'i4', {
+    write_var('cbh_3', 'i4', {
         'long_name': 'Highest cloud base height',
         'units': 'm',
     })
@@ -364,10 +399,14 @@ def write_output(dd, filename):
     })
     write_var('sky_detection_status', 'i4', {
         'long_name': 'Sky detection status',
+        'flag_values': '0, 1, 2, 3, 4, 5, 6, 7, 8, 9, -1, 99',
+        'flag_meanings': '0_octas 1_octas 2_octas 3_octas 4_octas 5_octas 6_octas 7_octas 8_octas vertical_visibility data_missing not_enough_data',
+        'comment': 'Sky detection algorithm',
     })
     write_var('pulse_energy', 'i4', {
-        'long_name': 'Pulse Energy',
+        'long_name': 'Pulse energy',
         'units': 'percent',
+        'comment': 'Percentage of nominal factory setting',
     })
     write_var('laser_temperature', 'i4', {
         'long_name': 'Laser temperature',
@@ -376,58 +415,66 @@ def write_output(dd, filename):
     write_var('window_transmission', 'i4', {
         'long_name': 'Window transmission estimate',
         'units': 'percent',
+        'comment': '90% to 100% means the window is clean',
     })
     write_var('tilt_angle', 'i4', {
         'long_name': 'Tilt angle',
-        'units': 'degrees'
+        'units': 'degrees',
     })
     write_var('background_light', 'i4', {
         'long_name': 'Background light',
-        'units': 'millivolt'
+        'units': 'millivolt',
+        'comment': 'Millivolts at internal ADC input',
     })
     write_var('pulse_length', 'S1', {
         'long_name': 'Pulse length',
         'flag_names': 'L, S',
-        'flag_meanings': 'long, short'
+        'flag_meanings': 'long short'
     })
-    write_var('pulse_qty', 'i4', {
-        'long_name': 'Pulse qty',
+    write_var('pulse_count', 'i4', {
+        'long_name': 'Pulse count',
+        'comment': 'Number of pulses during a single measurement cycle',
     })
-    write_var('gain', 'S1', {
-        'long_name': 'Gain',
+    write_var('receiver_gain', 'S1', {
+        'long_name': 'Receiver gain',
         'flag_values': 'H, L',
-        'flag_meanings': 'high, low',
+        'flag_meanings': 'high low',
+        'comment': 'High by default, may be low in fog or heavy snow',
     })
-    write_var('bandwidth', 'S1', {
-        'long_name': 'Bandwidth',
+    write_var('receiver_bandwidth', 'S1', {
+        'long_name': 'Receiver bandwidth',
         'flag_values': 'N, W',
-        'flag_meanings': 'narrow, wide'
+        'flag_meanings': 'narrow wide'
     })
     write_var('backscatter_sum', 'f8', {
         'long_name': 'Backscatter sum',
-        'units': 'sr^-1'
-    })
-    write_profile('height', 'i4', {
-        'long_name': 'Height',
-        'units': 'm'
+        'units': 'sr^-1',
+        'comment': 'Sum of detected and normalized backscatter',
     })
     write_layer('layer_height', 'i4', {
         'long_name': 'Layer height',
-        'units': 'm'
+        'units': 'm',
+        'comment': 'Sky condition algorithm',
     })
     write_layer('layer_cloud_amount', 'i4', {
         'long_name': 'Layer cloud amount',
-        'units': 'octas'
+        'units': 'octas',
+        'comment': 'Sky condition algorithm',
     })
     f.close()
 
 if __name__ == '__main__':
-    if len(sys.argv) != 3:
-        print('Usage: %s <input> <output>\n' % sys.argv[0])
-        sys.exit(1)
+    parser = argparse.ArgumentParser(description='Convert Vaisala CL51 and CL31 dat files to NetCDF')
+    parser.add_argument('-c',
+        dest='check',
+        action='store_true',
+        help='enable checksum verification'
+    )
+    parser.add_argument('input', help='input file')
+    parser.add_argument('output', help='output file')
+    args = parser.parse_args()
 
-    input_filename = sys.argv[1]
-    output_filename = sys.argv[2]
-
-    dd = read_input(input_filename)
-    write_output(dd, output_filename)
+    dd = read_input(args.input, {
+        'check': args.check
+    })
+    write_output(dd, args.output)

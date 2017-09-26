@@ -1,12 +1,16 @@
 # cl2nc
 
-cl2nc is a command-line Python program for converting
-Vaisala CL51 and CL31 dat files to NetCDF.
+cl2nc is a command-line Python program for converting Vaisala CL51 and CL31 dat
+files to NetCDF.
 
 ## Example
 
+cl2nc can be used on the command-line:
+
     cl2nc input.dat output.nc
-    cl2nc input.dat output.nc
+
+where `input.dat` is a Vaisala CL51 or CL31 dat file and output is the name
+of the NetCDF output file.
 
 ## Install
 
@@ -20,8 +24,14 @@ To install with the Python package manager on Linux:
 
 From source:
 
-    pip install python-netcdf4
+    pip install netCDF4
     python setup.py install
+
+You can also use the Python script `cl2nc` directly without installation.
+
+**Note:** Alternatively, the package netCDF4 is also present as the package
+`python-netcdf` on Debian-based Linux distributions, which you can install with
+`apt-get install python-netcdf`.
 
 ## Usage
 
@@ -53,14 +63,17 @@ Backscatter sum (sr^-1)
 
 Sum of detected and normalized backscatter (0-0.0999 sr^-1).
 
-### bandwidth
+### cbh_1
 
-Bandwidth
+Lowest cloud base height (m)
 
-- `N` - narrow
-- `W` - wide
+### cbh_2
 
-Narrow by default.
+Second lowest cloud base height (m)
+
+### cbh_3
+
+Highest cloud base height (m)
 
 ### detection_status
 
@@ -83,23 +96,6 @@ Sky detection status
 - -1 - data missing, sky condition option not active or ceilometer in standby mode
 - 99 - not enough data (after start-up)
 
-### gain
-
-Gain
-
-- `H` - high
-- `L` - low
-
-High by default, may be low in fog or heavy snow.
-
-### height
-
-Height (m)
-
-### highest_cbh
-
-Highest cloud base height (m)
-
 ### highest_signal
 
 Highest signal detected
@@ -108,21 +104,25 @@ Highest signal detected
 
 Laser temperature (C)
 
+### layer
+
+Layer number
+
 ### layer_cloud_amount
 
 Layer cloud amount (octas)
+
+Sky condition algorithm.
 
 ### layer_height
 
 Layer height (m)
 
+Sky condition algorithm.
+
 ### level
 
-Level
-
-### lowest_cbh
-
-Lowest cloud base height (m)
+Level number
 
 ### message_number
 
@@ -131,9 +131,16 @@ Message number
 - 1 - message without sky condition data
 - 2 - message with sky condition data
 
+### message_subclass
+
+Message subclass
+
+- 6 - 10 m x 1540 samples, range 15400 m (msg1_10x1540)
+- 8 - without a backscatter profile (msg1_base)
+
 ### pulse_energy
 
-Pulse Energy (% of nominal factory setting)
+Pulse energy (% of nominal factory setting)
 
 ### pulse_length
 
@@ -142,13 +149,25 @@ Pulse length
 - `L` - long (100 ns)
 - `S` - short
 
-### pulse_qty
+### pulse_count
 
-Pulse qty
+Pulse count
 
-### second_lowest_cbh
+### receiver_bandwidth
 
-Second lowest cloud base height (m)
+Receiver bandwidth
+
+- `N` - narrow
+- `W` - wide
+
+### receiver_gain
+
+Receiver gain
+
+- `H` - high
+- `L` - low
+
+High by default, may be low in fog or heavy snow.
 
 ### self_check
 
@@ -213,13 +232,6 @@ Flags:
 - 0x0004 - receiver warning
 - 0x0002 - tilt angle > 45 degrees warning
 
-### subclass
-
-Message subclass
-
-- 6 - 10 m x 1540 samples, range 15400 m (msg1_10x1540)
-- 8 - without a backscatter profile (msg1_base)
-
 ### tilt_angle
 
 Tilt angle (degrees from vertical)
@@ -238,14 +250,18 @@ Vertical resolution (m)
 
 ### vertical_visibility
 
-Vertical visibility
+Vertical visibility (m)
 
 ### window_transmission
 
 Window transmission estimate (%)
 
-The estimated transparency of 90% to 100% means that the window is clean.
+90% to 100% means the window is clean.
 
 ## License
 
 MIT License (see [LICENSE.md](LICENSE.md))
+
+## Contact
+
+Peter Kuma <peter.kuma@fastmail.com>
