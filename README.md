@@ -39,7 +39,7 @@ You can also use the Python script `cl2nc` directly without installation
     cl2nc <input> <output>
 
 - `input` - input dat file
-- `output` - output HDF file
+- `output` - output NetCDF file
 
 ## Variables
 
