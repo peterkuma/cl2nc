@@ -5,12 +5,12 @@ files to NetCDF.
 
 ## Example
 
-cl2nc can be used on the command-line:
+On the command-line:
 
     cl2nc input.dat output.nc
 
-where `input.dat` is a Vaisala CL51 or CL31 dat file and output is the name
-of the NetCDF output file.
+where `input.dat` is a Vaisala CL51 or CL31 dat file and `output.nc` is the name
+of a NetCDF output file.
 
 ## Install
 
@@ -264,4 +264,4 @@ MIT License (see [LICENSE.md](LICENSE.md))
 
 ## Contact
 
-Peter Kuma <peter.kuma@fastmail.com>
+Peter Kuma <<peter.kuma@fastmail.com>>
