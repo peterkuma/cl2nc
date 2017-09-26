@@ -13,4 +13,13 @@ setup(
     install_requires=['netCDF4>=1.2.9'],
     keywords=['vaisala', 'ceilometer', 'cl51', 'cl31', 'netcdf'],
     url='https://github.com/peterkuma/cl2nc',
+    classifiers=[
+        'Development Status :: 5 - Production/Stable',
+        'Environment :: Console',
+        'Intended Audience :: Science/Research',
+        'License :: OSI Approved :: MIT License',
+        'Operating System :: OS Independent',
+        'Programming Language :: Python :: 2.7',
+        'Topic :: Scientific/Engineering :: Atmospheric Science',
+    ]
 )
