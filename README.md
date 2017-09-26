@@ -29,11 +29,8 @@ From source:
     pip install netCDF4
     python setup.py install
 
-You can also use the Python script `cl2nc` directly without installation.
-
-**Note:** Alternatively, the package netCDF4 is also present as the package
-`python-netcdf` on Debian-based Linux distributions, which you can install with
-`apt-get install python-netcdf`.
+You can also use the Python script `cl2nc` directly without installation
+(as long as netCDF4 is installed).
 
 ## Usage
 
