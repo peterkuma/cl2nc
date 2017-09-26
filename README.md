@@ -12,6 +12,8 @@ On the command-line:
 where `input.dat` is a Vaisala CL51 or CL31 dat file and `output.nc` is the name
 of a NetCDF output file.
 
+See [example.nc.zip](example.nc.zip) for an example output.
+
 ## Install
 
 Requirements:
