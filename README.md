@@ -272,7 +272,7 @@ cl2nc version string. Follows [semantic versioning](http://semver.org/).
 
 ### created
 
-Time when the NetCDF was created (ISO 8601 UTC).
+Time when the NetCDF file was created (ISO 8601 UTC).
 
 ## License
 
@@ -286,7 +286,7 @@ Peter Kuma <<peter.kuma@fastmail.com>>
 
 cl2nc follows [semantic versioning](http://semver.org/).
 
-### 2.0.0
+### 2.0.0 (2017-10-19)
 
 - **Important:** Fixed units conversion for sky condition height data and
     vertical resolution. In previous versions vertical_resolution is off
