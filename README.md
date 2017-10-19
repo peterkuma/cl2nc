@@ -20,6 +20,8 @@ Requirements:
 
 - Python 2.7
 
+**Note:** Python 3 is currently not supported.
+
 To install with the Python package manager on Linux:
 
     pip install cl2nc
@@ -257,6 +259,20 @@ Window transmission estimate (%)
 
 90% to 100% means the window is clean.
 
+## Attributes
+
+### software
+
+cl2nc identification: `cl2nc (https://github.com/peterkuma/cl2nc)`.
+
+### version
+
+cl2nc version string. Follows [semantic versioning](http://semver.org/).
+
+### created
+
+Time when the NetCDF was created (ISO 8601 UTC).
+
 ## License
 
 MIT License (see [LICENSE.md](LICENSE.md))
@@ -264,3 +280,17 @@ MIT License (see [LICENSE.md](LICENSE.md))
 ## Contact
 
 Peter Kuma <<peter.kuma@fastmail.com>>
+
+## Changelog
+
+cl2nc follows [semantic versioning](http://semver.org/).
+
+### 2.0.0
+
+- **Important:** Fixed units conversion for sky condition height data and
+    vertical resolution. In previous versions vertical_resolution is off
+    by a factor of 0.3048 if input file units is ft. layer_height is off
+    by a factor of 100 or 10 if units are ft or m, respectively.
+- Added NetCDF file attributes: `software`, `version`, `created`.
+- Format time with `T` as delimiter to conform to ISO 8601.
+- Improved error handling.

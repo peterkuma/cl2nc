@@ -1,13 +1,18 @@
 #!/usr/bin/env python2.7
 
+__version__ = '2.0.0'
+
 import signal
 signal.signal(signal.SIGINT, lambda signal, frame: sys.exit(0))
 
 import sys
+import os
+import traceback
 import re
 import itertools
 import logging
 import argparse
+import datetime as dt
 
 import numpy as np
 from netCDF4 import Dataset
@@ -51,7 +56,7 @@ def line0(s):
     if m is None: raise Exception('Invalid syntax for time format')
     d = m.groupdict()
     d2 = {}
-    d2['time'] = '%s-%s-%s %s:%s:%s' % (
+    d2['time'] = '%s-%s-%sT%s:%s:%s' % (
         d['year'],
         d['month'],
         d['day'],
@@ -191,14 +196,15 @@ def postprocess(d):
         d['layer_cloud_amount'][i] = d['layer%d_cloud_amount' % (i + 1)]
     d['units'] = 'm' if (d['status_internal'] & 0x0080) else 'ft'
 
+    d['layer_height'] *= 100 if d['units'] == 'ft' else 10
+
     if d['units'] == 'ft':
         for var in [
-            'vertical_visibility'
-            'cbh_1'
-            'cbh_2'
-            'cbh_3'
-            'vertical_resolution'
-            'layer_height'
+            'vertical_visibility',
+            'cbh_1',
+            'cbh_2',
+            'cbh_3',
+            'layer_height',
         ]:
             d[var] *= 0.3048
 
@@ -272,13 +278,25 @@ def read_input(filename, options={}):
                 else:
                     raise Exception()
             except Exception as e:
-                raise Exception('Error on line %d: %s: %s' % (line_number, e, line))
+                s = (''.join(traceback.format_exception_only(type(e), e)))
+                raise \
+                    Exception, \
+                    'Error on line %d: %s' % (
+                        line_number,
+                        s.strip(),
+                    ), \
+                    sys.exc_info()[2]
         return dd
 
 def write_output(dd, filename):
     n = len(dd)
     vars = list(set(itertools.chain(*[d.keys() for d in dd])))
     m = np.max([0] + [len(d['backscatter']) for d in dd])
+
+    if os.path.dirname(filename) != '' and \
+        not os.path.exists(os.path.dirname(filename)):
+        raise Exception('%s: No such file or directory' % filename)
+
     f = Dataset(filename, 'w', format='NETCDF4')
     f.createDimension('time', n)
     f.createDimension('level', m)
@@ -461,6 +479,11 @@ def write_output(dd, filename):
         'units': 'octas',
         'comment': 'Sky condition algorithm',
     })
+
+    f.software = 'cl2nc (https://github.com/peterkuma/cl2nc)'
+    f.version = __version__
+    f.created = dt.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
+
     f.close()
 
 if __name__ == '__main__':
