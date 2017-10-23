@@ -33,6 +33,9 @@ re_none = re.compile('^/* *$')
 def is_none(s):
     return re_none.match(s)
 
+def int_to_float(x):
+    return np.where(x != NA_INT, x, np.nan)
+
 def read_int(d, d2, var):
     d2[var] = int(d[var]) if not is_none(d[var]) else NA_INT
 
@@ -186,29 +189,49 @@ def check(d):
         raise Exception('Invalid checksum')
 
 def postprocess(d):
+    for var in [
+        'backscatter',
+        'scale',
+        'backscatter_sum',
+    ]:
+        d[var] = int_to_float(d[var])
+
     d['backscatter'] = d['backscatter']/100000.0*(d['scale']/100.0)
-    d['backscatter_sum'] = d['backscatter_sum']/100000.0*(d['scale']/100.0)
-    d['layer_height'] = np.nan*np.zeros(5)
-    d['layer_cloud_amount'] = np.nan*np.zeros(5)
+    d['backscatter_sum'] = d['backscatter_sum']/10000.0*(d['scale']/100.0)
+    d['layer_height'] = NA_INT*np.ones(5)
+    d['layer_cloud_amount'] = NA_INT*np.ones(5)
     for i in range(5):
         d['layer_height'][i] = d['layer%d_height' % (i + 1)]
     for i in range(5):
         d['layer_cloud_amount'][i] = d['layer%d_cloud_amount' % (i + 1)]
     d['units'] = 'm' if (d['status_internal'] & 0x0080) else 'ft'
 
-    d['layer_height'] *= 100 if d['units'] == 'ft' else 10
+    layer_height_factor = 100 if d['units'] == 'ft' else 10
+    d['layer_height'] = np.where(
+        d['layer_height'] != NA_INT,
+        d['layer_height']*layer_height_factor,
+        NA_INT
+    )
 
     if d['units'] == 'ft':
         for var in [
             'vertical_visibility',
+            'layer_height',
             'cbh_1',
             'cbh_2',
             'cbh_3',
-            'layer_height',
         ]:
-            d[var] *= 0.3048
+            d[var] = np.where(
+                d[var] != NA_INT,
+                d[var]*0.3048,
+                NA_INT
+            )
 
-    d['pulse_count'] *= 1024
+    d['pulse_count'] = np.where(
+        d['pulse_count'] != NA_INT,
+        d['pulse_count']*1024,
+        NA_INT
+    )
 
 def crc16(buf):
     crc = 0xffff
@@ -464,7 +487,7 @@ def write_output(dd, filename):
         'flag_values': 'N, W',
         'flag_meanings': 'narrow wide'
     })
-    write_var('backscatter_sum', 'f8', {
+    write_var('backscatter_sum', 'f4', {
         'long_name': 'Backscatter sum',
         'units': 'sr^-1',
         'comment': 'Sum of detected and normalized backscatter',
