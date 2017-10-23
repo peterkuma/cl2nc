@@ -42,7 +42,7 @@ You can also use the Python script `cl2nc` directly without installation
 
 - `input` - input dat file
 - `output` - output NetCDF file
-- `-c` - enable checksum verification
+- `-c` - enable checksum verification (slow)
 
 ## Variables
 

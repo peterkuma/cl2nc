@@ -514,7 +514,7 @@ if __name__ == '__main__':
     parser.add_argument('-c',
         dest='check',
         action='store_true',
-        help='enable checksum verification'
+        help='enable checksum verification (slow)'
     )
     parser.add_argument('input', help='input file')
     parser.add_argument('output', help='output file')
