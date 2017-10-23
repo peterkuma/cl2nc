@@ -286,6 +286,11 @@ Peter Kuma <<peter.kuma@fastmail.com>>
 
 cl2nc follows [semantic versioning](http://semver.org/).
 
+### 2.0.1 (2017-10-23)
+
+- Fixed writing of NA integer values.
+- Fixed scale factor of `backscatter_sum`.
+
 ### 2.0.0 (2017-10-19)
 
 - **Important:** Fixed units conversion for sky condition height data and
