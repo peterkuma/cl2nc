@@ -22,7 +22,8 @@ Requirements:
 
 **Note:** Python 3 is currently not supported.
 
-To install with the Python package manager on Linux:
+To install from the
+[Python Package Index (PyPI)](https://pypi.python.org/pypi/cl2nc) on Linux:
 
     pip install cl2nc
 
@@ -36,8 +37,6 @@ You can also use the Python script `cl2nc` directly without installation
 
 ## Usage
 
-### cl2nc
-
     cl2nc [-c] <input> <output>
 
 - `input` - input dat file
@@ -48,6 +47,9 @@ You can also use the Python script `cl2nc` directly without installation
 
 Please see Vaisala CL51 User's Guide for a complete description of the
 variables.
+
+**Note:** The DAT files can alternatively contain values in feet
+(instead of meters), in which case all values are converted by cl2nc to meters.
 
 ### background_light
 
@@ -278,7 +280,10 @@ Time when the NetCDF file was created (ISO 8601 UTC).
 
 MIT License (see [LICENSE.md](LICENSE.md))
 
-## Contact
+## Support
+
+cl2nc has not yet been extensively tested. If you have any doubts about
+the output, please check against values in the DAT file or send me the file.
 
 Peter Kuma <<peter.kuma@fastmail.com>>
 
