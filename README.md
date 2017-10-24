@@ -47,9 +47,9 @@ You can also use the Python script `cl2nc` directly without installation
 cl2nc [-c] <input> <output>
 ```
 
-- `input` - input dat file
-- `output` - output NetCDF file
-- `-c` - enable checksum verification (slow)
+- `input` – input dat file
+- `output` – output NetCDF file
+- `-c` – enable checksum verification (slow)
 
 ## Variables
 
@@ -91,22 +91,22 @@ Highest cloud base height (m)
 
 Detection status
 
-- `0` - no significant backscatter
-- `1` - one cloud base detected
-- `2` - two cloud bases detected
-- `3` - three cloud bases detected
-- `4` - full obscuration determined but no cloud base detected
-- `5` - some obscuration detected but determined to be transparent
-- `/` - raw data input to algorithm missing or suspect
+- `0` – no significant backscatter
+- `1` – one cloud base detected
+- `2` – two cloud bases detected
+- `3` – three cloud bases detected
+- `4` – full obscuration determined but no cloud base detected
+- `5` – some obscuration detected but determined to be transparent
+- `/` – raw data input to algorithm missing or suspect
 
 ### sky_detection_status
 
 Sky detection status
 
-- 0-8 - cloud coverage of the first layer in octas
-- 9 - vertical visibility
-- -1 - data missing, sky condition option not active or ceilometer in standby mode
-- 99 - not enough data (after start-up)
+- 0-8 – cloud coverage of the first layer in octas
+- 9 – vertical visibility
+- -1 – data missing, sky condition option not active or ceilometer in standby mode
+- 99 – not enough data (after start-up)
 
 ### highest_signal
 
@@ -140,15 +140,15 @@ Level number
 
 Message number
 
-- 1 - message without sky condition data
-- 2 - message with sky condition data
+- 1 – message without sky condition data
+- 2 – message with sky condition data
 
 ### message_subclass
 
 Message subclass
 
-- 6 - 10 m x 1540 samples, range 15400 m (msg1_10x1540)
-- 8 - without a backscatter profile (msg1_base)
+- 6 – 10 m x 1540 samples, range 15400 m (msg1_10x1540)
+- 8 – without a backscatter profile (msg1_base)
 
 ### pulse_energy
 
@@ -158,8 +158,8 @@ Pulse energy (% of nominal factory setting)
 
 Pulse length
 
-- `L` - long (100 ns)
-- `S` - short
+- `L` – long (100 ns)
+- `S` – short
 
 ### pulse_count
 
@@ -169,15 +169,15 @@ Pulse count
 
 Receiver bandwidth
 
-- `N` - narrow
-- `W` - wide
+- `N` – narrow
+- `W` – wide
 
 ### receiver_gain
 
 Receiver gain
 
-- `H` - high
-- `L` - low
+- `H` – high
+- `L` – low
 
 High by default, may be low in fog or heavy snow.
 
@@ -185,9 +185,9 @@ High by default, may be low in fog or heavy snow.
 
 Self check
 
-- `0` - self-check OK
-- `W` - at least one warning active, no alarms
-- `A` - at least one alarm active
+- `0` – self-check OK
+- `W` – at least one warning active, no alarms
+- `A` – at least one alarm active
 
 ### software_level
 
@@ -199,13 +199,13 @@ Status alarm
 
 Flags:
 
-- 0x8000 - transmitter shut-off
-- 0x4000 - transmitter failure
-- 0x2000 - receiver failure
-- 0x1000 - voltage failure
-- 0x0400 - memory error
-- 0x0200 - light path obstruction
-- 0x0100 - receiver saturation
+- 0x8000 – transmitter shut-off
+- 0x4000 – transmitter failure
+- 0x2000 – receiver failure
+- 0x1000 – voltage failure
+- 0x0400 – memory error
+- 0x0200 – light path obstruction
+- 0x0100 – receiver saturation
 
 ### status_internal
 
@@ -213,16 +213,16 @@ Status internal
 
 Flags:
 
-- 0x8000 - blower is on
-- 0x4000 - blower heater is on
-- 0x2000 - internal heater is on
-- 0x1000 - working from battery
-- 0x0800 - standby mode is on
-- 0x0400 - self test in progress
-- 0x0200 - manual data acquisition settings are effective
-- 0x0080 - units are meters if on, else feet (note that units are always converted to m by cl2nc)
-- 0x0040 - manual blower control
-- 0x0020 - polling mode is on
+- 0x8000 – blower is on
+- 0x4000 – blower heater is on
+- 0x2000 – internal heater is on
+- 0x1000 – working from battery
+- 0x0800 – standby mode is on
+- 0x0400 – self test in progress
+- 0x0200 – manual data acquisition settings are effective
+- 0x0080 – units are meters if on, else feet (note that units are always converted to m by cl2nc)
+- 0x0040 – manual blower control
+- 0x0020 – polling mode is on
 
 ### status_warning
 
@@ -230,19 +230,19 @@ Status warning
 
 Flags:
 
-- 0x8000 - window contamination
-- 0x4000 - battery voltage low
-- 0x2000 - transmitter expires
-- 0x1000 - high humidity
-- 0x0800 - blower failure
-- 0x0100 - humidity sensor failure
-- 0x0080 - heater fault
-- 0x0040 - high background radiance
-- 0x0020 - ceilometer engine board failure
-- 0x0010 - battery failure
-- 0x0008 - laser monitor failure
-- 0x0004 - receiver warning
-- 0x0002 - tilt angle > 45 degrees warning
+- 0x8000 – window contamination
+- 0x4000 – battery voltage low
+- 0x2000 – transmitter expires
+- 0x1000 – high humidity
+- 0x0800 – blower failure
+- 0x0100 – humidity sensor failure
+- 0x0080 – heater fault
+- 0x0040 – high background radiance
+- 0x0020 – ceilometer engine board failure
+- 0x0010 – battery failure
+- 0x0008 – laser monitor failure
+- 0x0004 – receiver warning
+- 0x0002 – tilt angle > 45 degrees warning
 
 ### tilt_angle
 
