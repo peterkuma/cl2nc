@@ -7,7 +7,9 @@ files to NetCDF.
 
 On the command-line:
 
-    cl2nc input.dat output.nc
+```sh
+cl2nc input.dat output.nc
+```
 
 where `input.dat` is a Vaisala CL51 or CL31 dat file and `output.nc` is the name
 of a NetCDF output file.
@@ -25,19 +27,25 @@ Requirements:
 To install from the
 [Python Package Index (PyPI)](https://pypi.python.org/pypi/cl2nc) on Linux:
 
-    pip install cl2nc
+```sh
+pip install cl2nc
+```
 
 From source:
 
-    pip install netCDF4
-    python setup.py install
+```sh
+pip install netCDF4
+python setup.py install
+```
 
 You can also use the Python script `cl2nc` directly without installation
 (as long as netCDF4 is installed).
 
 ## Usage
 
-    cl2nc [-c] <input> <output>
+```sh
+cl2nc [-c] <input> <output>
+```
 
 - `input` - input dat file
 - `output` - output NetCDF file
