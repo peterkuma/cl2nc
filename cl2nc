@@ -17,7 +17,7 @@ import datetime as dt
 import numpy as np
 from netCDF4 import Dataset
 
-NA_INT = 1<<31
+NA_INT = -1<<31
 NA_FLOAT32 = np.nan
 NA_FLOAT64 = np.nan
 
@@ -248,7 +248,7 @@ def read_input(filename, options={}):
         'check': False,
     }, **options)
 
-    with open(filename, 'r') as f:
+    with open(filename, 'rb') as f:
         d = {}
         dd = []
         stage = 0
