@@ -21,13 +21,14 @@ NA_INT = -1<<31
 NA_FLOAT32 = np.nan
 NA_FLOAT64 = np.nan
 
-re_line0 = re.compile('^-(?P<year>\d{4})-(?P<month>\d\d)-(?P<day>\d\d) (?P<hour>\d\d):(?P<minute>\d\d):(?P<second>\d\d)\r\n$')
-re_line1 = re.compile('^\x01CL(?P<unit>.)(?P<software_level>\d\d\d)(?P<message_number>\d)(?P<message_subclass>\d)\x02\r?\n?$')
-re_line2 = re.compile('^(?P<detection_status>.)(?P<self_check>.) (?P<cbh_or_vertical_visibility>.{5}) (?P<cbh2_or_highest_signal>.{5}) (?P<cbh_3>.{5}) (?P<status_alarm>.{4})(?P<status_warning>.{4})(?P<status_internal>.{4})\r\n$')
-re_line3 = re.compile('^ (?P<sky_detection_status>..) +(?P<layer1_height>.{4}) +(?P<layer2_cloud_amount>.) +(?P<layer2_height>.{4}) +(?P<layer3_cloud_amount>.) +(?P<layer3_height>.{4}) +(?P<layer4_cloud_amount>.) +(?P<layer4_height>.{4}) +(?P<layer5_cloud_amount>.) +(?P<layer5_height>.{3,4})\r\n$')
-re_line4 = re.compile('^(?P<scale>.{5}) (?P<vertical_resolution>..) (?P<nsamples>.{4}) (?P<pulse_energy>...) (?P<laser_temperature>...) (?P<window_transmission>...) (?P<tilt_angle>..) (?P<background_light>.{4}) (?P<pulse_length>.)(?P<pulse_count>.{4})(?P<receiver_gain>.)(?P<receiver_bandwidth>.)(?P<sampling>..) (?P<backscatter_sum>...)\r\n$')
-re_line5 = re.compile('^(?P<backscatter>.*)\r\n$')
-re_line6 = re.compile('^\x03(?P<checksum>.{4})\x04\r\n$')
+re_line0 = re.compile('^-(?P<year>\d{4})-(?P<month>\d\d)-(?P<day>\d\d) (?P<hour>\d\d):(?P<minute>\d\d):(?P<second>\d\d)$')
+re_line1 = re.compile('^\x01CL(?P<unit>.)(?P<software_level>\d\d\d)(?P<message_number>\d)(?P<message_subclass>\d)\x02?$')
+re_line2 = re.compile('^(?P<detection_status>.)(?P<self_check>.) (?P<cbh_or_vertical_visibility>.{5}) (?P<cbh2_or_highest_signal>.{5}) (?P<cbh_3>.{5}) (?P<status_alarm>.{4})(?P<status_warning>.{4})(?P<status_internal>.{4})$')
+re_line3 = re.compile('^ (?P<sky_detection_status>..) +(?P<layer1_height>.{4}) +(?P<layer2_cloud_amount>.) +(?P<layer2_height>.{4}) +(?P<layer3_cloud_amount>.) +(?P<layer3_height>.{4}) +(?P<layer4_cloud_amount>.) +(?P<layer4_height>.{4}) +(?P<layer5_cloud_amount>.) +(?P<layer5_height>.{3,4})$')
+re_line4 = re.compile('^(?P<scale>.{5}) (?P<vertical_resolution>..) (?P<nsamples>.{4}) (?P<pulse_energy>...) (?P<laser_temperature>...) (?P<window_transmission>...) (?P<tilt_angle>..) (?P<background_light>.{4}) (?P<pulse_length>.)(?P<pulse_count>.{4})(?P<receiver_gain>.)(?P<receiver_bandwidth>.)(?P<sampling>..) (?P<backscatter_sum>...)$')
+re_line5 = re.compile('^(?P<backscatter>.*)$')
+re_line6 = re.compile('^\x03(?P<checksum>.{4})\x04$')
+re_line6x = re.compile('^(?P<time>\d+)$')
 re_none = re.compile('^/* *$')
 
 def is_none(s):
@@ -178,14 +179,28 @@ def line5(s):
 
 def line6(s):
     m = re_line6.match(s)
-    if m is None: raise Exception('Invalid syntax for "line 6" format')
+    if m is None:
+        raise Exception('Invalid syntax for "line 6" format')
     d = m.groupdict()
     d2 = {}
     read_hex(d, d2, 'checksum')
     return d2
 
+def line6x(s):
+    m = re_line6x.match(s)
+    if m is None:
+        raise Exception('Invalid syntax for "line 6" format')
+    d = m.groupdict()
+    d2 = {}
+    read_int(d, d2, 'time')
+    d2['time'] = (
+        dt.datetime(1970, 1, 1) +
+        dt.timedelta(0, d2['time'])
+    ).strftime('%Y-%m-%dT%H:%M:%S')
+    return d2
+
 def check(d):
-    if crc16(d['message']) != d['checksum']:
+    if 'checksum' in d and crc16(d['message']) != d['checksum']:
         raise Exception('Invalid checksum')
 
 def postprocess(d):
@@ -198,20 +213,24 @@ def postprocess(d):
 
     d['backscatter'] = d['backscatter']/100000.0*(d['scale']/100.0)
     d['backscatter_sum'] = d['backscatter_sum']/10000.0*(d['scale']/100.0)
-    d['layer_height'] = NA_INT*np.ones(5)
-    d['layer_cloud_amount'] = NA_INT*np.ones(5)
-    for i in range(5):
-        d['layer_height'][i] = d['layer%d_height' % (i + 1)]
-    for i in range(5):
-        d['layer_cloud_amount'][i] = d['layer%d_cloud_amount' % (i + 1)]
-    d['units'] = 'm' if (d['status_internal'] & 0x0080) else 'ft'
 
+    d['units'] = 'm' if (d['status_internal'] & 0x0080) else 'ft'
     layer_height_factor = 100 if d['units'] == 'ft' else 10
-    d['layer_height'] = np.where(
-        d['layer_height'] != NA_INT,
-        d['layer_height']*layer_height_factor,
-        NA_INT
-    )
+
+    if 'layer1_height' in d:
+        d['layer_height'] = NA_INT*np.ones(5)
+        for i in range(5):
+            d['layer_height'][i] = d['layer%d_height' % (i + 1)]
+        d['layer_height'] = np.where(
+            d['layer_height'] != NA_INT,
+            d['layer_height']*layer_height_factor,
+            NA_INT
+        )
+
+    if 'layer1_cloud_amount' in d:
+        d['layer_cloud_amount'] = NA_INT*np.ones(5)
+        for i in range(5):
+            d['layer_cloud_amount'][i] = d['layer%d_cloud_amount' % (i + 1)]
 
     if d['units'] == 'ft':
         for var in [
@@ -232,6 +251,8 @@ def postprocess(d):
         d['pulse_count']*1024,
         NA_INT
     )
+
+    d['time'] = d.get('time', '')
 
 def crc16(buf):
     crc = 0xffff
@@ -256,59 +277,69 @@ def read_input(filename, options={}):
 
         for line in f.readlines():
             line_number += 1
+            linex = line.rstrip()
 
-            if line.strip() == '':
+            if linex == '':
                 continue
 
-            if line.startswith('-') and not re_line0.match(line):
+            if linex.startswith('-') and not re_line0.match(linex):
                 continue
 
-            try:
-                if stage == 0:
-                    d = {}
-                    d.update(line0(line))
-                    stage = 1
-                elif stage == 1:
-                    d.update(line1(line))
-                    d['message'] = line[1:]
-                    stage = 2
-                elif stage == 2:
-                    d.update(line2(line))
-                    d['message'] += line
-                    if d['message_number'] == 2:
-                        stage = 3
-                    else:
+            while True:
+                try:
+                    if stage == 0:
+                        d = {}
+                        try:
+                            d.update(line0(linex))
+                        except:
+                            stage = 1
+                            continue
+                        stage = 1
+                    elif stage == 1:
+                        d.update(line1(linex))
+                        d['message'] = line[1:]
+                        stage = 2
+                    elif stage == 2:
+                        d.update(line2(linex))
+                        d['message'] += line
+                        if d['message_number'] == 2:
+                            stage = 3
+                        else:
+                            stage = 4
+                    elif stage == 3:
+                        d.update(line3(linex))
+                        d['message'] += line
                         stage = 4
-                elif stage == 3:
-                    d.update(line3(line))
-                    d['message'] += line
-                    stage = 4
-                elif stage == 4:
-                    d.update(line4(line))
-                    d['message'] += line
-                    stage = 5
-                elif stage == 5:
-                    d.update(line5(line))
-                    d['message'] += line
-                    stage = 6
-                elif stage == 6:
-                    d.update(line6(line))
-                    d['message'] += line[0]
-                    if options['check']: check(d)
-                    postprocess(d)
-                    dd.append(d)
-                    stage = 0
-                else:
-                    raise Exception()
-            except Exception as e:
-                s = (''.join(traceback.format_exception_only(type(e), e)))
-                raise \
-                    Exception, \
-                    'Error on line %d: %s' % (
-                        line_number,
-                        s.strip(),
-                    ), \
-                    sys.exc_info()[2]
+                    elif stage == 4:
+                        d.update(line4(linex))
+                        d['message'] += line
+                        stage = 5
+                    elif stage == 5:
+                        d.update(line5(linex))
+                        d['message'] += line
+                        stage = 6
+                    elif stage == 6:
+                        try:
+                            d.update(line6(linex))
+                            d['message'] += line[0]
+                        except:
+                            d.update(line6x(linex))
+                        if options['check']: check(d)
+                        postprocess(d)
+                        dd.append(d)
+                        stage = 0
+                    else:
+                        raise Exception()
+                except Exception as e:
+                    s = (''.join(traceback.format_exception_only(type(e), e)))
+                    raise \
+                        Exception, \
+                        'Error on line %d: %s' % (
+                            line_number,
+                            s.strip(),
+                        ), \
+                        sys.exc_info()[2]
+                break
         return dd
 
 def write_output(dd, filename):
