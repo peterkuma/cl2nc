@@ -299,6 +299,11 @@ Peter Kuma <<peter.kuma@fastmail.com>>
 
 cl2nc follows [semantic versioning](http://semver.org/).
 
+### 2.1.0 (2017-11-25)
+
+- Fixed parsing on Windows (line endings).
+- Added support for a specific CL31 format (timestamp line instead of checksum).
+
 ### 2.0.1 (2017-10-23)
 
 - Fixed writing of NA integer values.
