@@ -73,40 +73,40 @@ Missing values are encoded as NaN (floating-point variables) or -2147483648
 (integer variables). The `_FillValue` attribute contains the missing value
 used in the given variable.
 
-| Variable | Description | Dimensions |
+| Variable | Description | Units | Dimensions |
 | --- | --- | --- |
-| [background_light](#background_light) | Background light (mV) | time |
-| [backscatter](#backscatter) | Attenuated volume backscatter coefficient (km-^1.sr^-1) | time, level |
-| [backscatter_sum](#backscatter_sum) | Backscatter sum (sr^-1) | time |
-| [cbh_1](#cbh_1) | Lowest cloud base height (m) | time |
-| [cbh_2](#cbh_2) | Second lowest cloud base height (m) | time |
-| [cbh_3](#cbh_3) | Highest cloud base height (m) | time |
-| [detection_status](#detection_status) | Detection status | time |
-| [sky_detection_status](#sky_detection_status) | Sky detection status | time |
-| [highest_signal](#highest_signal) | Highest signal detected | time |
-| [laser_temperature](#laser_temperature) | Laser temperature (C) | time |
-| [layer](#layer) | Layer number | layer |
-| [layer_cloud_amount](#layer_cloud_amount) | Layer cloud amount (octas) | time, layer |
-| [layer_height](#layer_height) | Layer height (m) | time, layer |
-| [level](#level) | Level number | level |
-| [message_number](#message_number) | Message number | time |
-| [message_subclass](#message_subclass) | Message subclass | time |
-| [pulse_energy](#pulse_energy) | Pulse energy (% of nominal factory setting) | time |
-| [pulse_length](#pulse_length) | Pulse length | time |
-| [pulse_count](#pulse_count) | Pulse count | time |
-| [receiver_bandwidth](#receiver_bandwidth) | Receiver bandwidth | time |
-| [receiver_gain](#receiver_gain) | Receiver gain | time |
-| [self_check](#self_check) | Self check | time |
-| [software_level](#software_level) | Software level ID | time |
-| [status_alarm](#status_alarm) | Status alarm | time |
-| [status_internal](#status_internal) | Status internal | time |
-| [status_warning](#status_warning) | Status warning | time |
-| [tilt_angle](#tilt_angle) | Tilt angle (degrees from vertical) | time |
-| [time](#time) | Time (ISO 8601) | time |
-| [unit](#unit) | Unit identification character | time |
-| [vertical_resolution](#vertical_resolution) | Vertical resolution (m) | time |
-| [vertical_visibility](#vertical_visibility) | Vertical visibility (m) | time |
-| [window_transmission](#window_transmission) | Window transmission estimate (%) | time |
+| [background_light](#background_light) | Background light | mV | time |
+| [backscatter](#backscatter) | Attenuated volume backscatter coefficient | km<sup>-1</sup>.sr<sup>-1</sup> | time, level |
+| [backscatter_sum](#backscatter_sum) | Backscatter sum | sr<sup>-1</sup> | time |
+| [cbh_1](#cbh_1) | Lowest cloud base height | m | time |
+| [cbh_2](#cbh_2) | Second lowest cloud base height | m | time |
+| [cbh_3](#cbh_3) | Highest cloud base height | m | time |
+| [detection_status](#detection_status) | Detection status | | time |
+| [sky_detection_status](#sky_detection_status) | Sky detection status | | time |
+| [highest_signal](#highest_signal) | Highest signal detected | | time |
+| [laser_temperature](#laser_temperature) | Laser temperature | °C | time |
+| [layer](#layer) | Layer number | | layer |
+| [layer_cloud_amount](#layer_cloud_amount) | Layer cloud amount | octas | time, layer |
+| [layer_height](#layer_height) | Layer height | m | time, layer |
+| [level](#level) | Level number | | level |
+| [message_number](#message_number) | Message number | | time |
+| [message_subclass](#message_subclass) | Message subclass | | time |
+| [pulse_energy](#pulse_energy) | Pulse energy | % | time |
+| [pulse_length](#pulse_length) | Pulse length | | time |
+| [pulse_count](#pulse_count) | Pulse count | | time |
+| [receiver_bandwidth](#receiver_bandwidth) | Receiver bandwidth | | time |
+| [receiver_gain](#receiver_gain) | Receiver gain | | time |
+| [self_check](#self_check) | Self check | | time |
+| [software_level](#software_level) | Software level ID | | time |
+| [status_alarm](#status_alarm) | Status alarm | | time |
+| [status_internal](#status_internal) | Status internal | | time |
+| [status_warning](#status_warning) | Status warning | | time |
+| [tilt_angle](#tilt_angle) | Tilt angle | degrees | time |
+| [time](#time) | Time | ISO 8601 | time |
+| [unit](#unit) | Unit identification character | | time |
+| [vertical_resolution](#vertical_resolution) | Vertical resolution | m | time |
+| [vertical_visibility](#vertical_visibility) | Vertical visibility | m | time |
+| [window_transmission](#window_transmission) | Window transmission estimate | % | time |
 
 ### background_light
 
@@ -116,13 +116,13 @@ Millivolts at internal ADC input.
 
 ### backscatter
 
-Attenuated volume backscatter coefficient (km-^1.sr^-1)
+Attenuated volume backscatter coefficient (km<sup>-1</sup>.sr<sup>-1</sup>)
 
 ### backscatter_sum
 
-Backscatter sum (sr^-1)
+Backscatter sum (sr<sup>-1</sup>)
 
-Sum of detected and normalized backscatter (0-0.0999 sr^-1).
+Sum of detected and normalized backscatter (0–0.0999 sr<sup>-1</sup>).
 
 ### cbh_1
 
@@ -163,7 +163,7 @@ Highest signal detected
 
 ### laser_temperature
 
-Laser temperature (C)
+Laser temperature (°C)
 
 ### layer
 
@@ -196,7 +196,7 @@ Message number
 
 Message subclass
 
-- 6 – 10 m x 1540 samples, range 15400 m (msg1_10x1540)
+- 6 – 10 m ⨉ 1540 samples, range 15400 m (msg1_10x1540)
 - 8 – without a backscatter profile (msg1_base)
 
 ### pulse_energy
