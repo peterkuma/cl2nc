@@ -14,7 +14,7 @@ cl2nc input.dat output.nc
 where `input.dat` is a Vaisala CL51 or CL31 dat file and `output.nc` is the name
 of a NetCDF output file.
 
-See [example.nc.zip](example.nc.zip) for an example output.
+See [example.zip](example.zip) for an example input and output.
 
 ## Install
 
@@ -66,8 +66,12 @@ cl2nc [-c] <input> <output>
 Please see Vaisala CL51 User's Guide for a complete description of the
 variables.
 
-**Note:** The DAT files can alternatively contain values in feet
+The DAT files can alternatively contain values in feet
 (instead of meters), in which case all values are converted by cl2nc to meters.
+
+Missing values are encoded as NaN (floating-point variables) or -2147483648
+(integer variables). The `_FillValue` attribute contains the missing value
+used in the given variable.
 
 | Variable | Description | Dimensions |
 | --- | --- | --- |
@@ -350,8 +354,8 @@ for you contact me: Peter Kuma <<peter.kuma@fastmail.com>>.
 
 ### Where is the height information?
 
-Height can be determined from `vertical_resolution`. The instrument
-samples vertical bins on regular intervals.
+Height can be determined from [vertical_resolution](#vertical_resolution).
+The instrument samples vertical bins on regular intervals.
 
 ## Changelog
 
