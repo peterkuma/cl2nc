@@ -69,6 +69,41 @@ variables.
 **Note:** The DAT files can alternatively contain values in feet
 (instead of meters), in which case all values are converted by cl2nc to meters.
 
+| Variable | Description | Dimensions |
+| --- | --- | --- |
+| [background_light](#background_light) | Background light (mV) | time |
+| [backscatter](#backscatter) | Attenuated volume backscatter coefficient (km-^1.sr^-1) | time, level |
+| [backscatter_sum](#backscatter_sum) | Backscatter sum (sr^-1) | time |
+| [cbh_1](#cbh_1) | Lowest cloud base height (m) | time |
+| [cbh_2](#cbh_2) | Second lowest cloud base height (m) | time |
+| [cbh_3](#cbh_3) | Highest cloud base height (m) | time |
+| [detection_status](#detection_status) | Detection status | time |
+| [sky_detection_status](#sky_detection_status) | Sky detection status | time |
+| [highest_signal](#highest_signal) | Highest signal detected | time |
+| [laser_temperature](#laser_temperature) | Laser temperature (C) | time |
+| [layer](#layer) | Layer number | layer |
+| [layer_cloud_amount](#layer_cloud_amount) | Layer cloud amount (octas) | time, layer |
+| [layer_height](#layer_height) | Layer height (m) | time, layer |
+| [level](#level) | Level number | level |
+| [message_number](#message_number) | Message number | time |
+| [message_subclass](#message_subclass) | Message subclass | time |
+| [pulse_energy](#pulse_energy) | Pulse energy (% of nominal factory setting) | time |
+| [pulse_length](#pulse_length) | Pulse length | time |
+| [pulse_count](#pulse_count) | Pulse count | time |
+| [receiver_bandwidth](#receiver_bandwidth) | Receiver bandwidth | time |
+| [receiver_gain](#receiver_gain) | Receiver gain | time |
+| [self_check](#self_check) | Self check | time |
+| [software_level](#software_level) | Software level ID | time |
+| [status_alarm](#status_alarm) | Status alarm | time |
+| [status_internal](#status_internal) | Status internal | time |
+| [status_warning](#status_warning) | Status warning | time |
+| [tilt_angle](#tilt_angle) | Tilt angle (degrees from vertical) | time |
+| [time](#time) | Time (ISO 8601) | time |
+| [unit](#unit) | Unit identification character | time |
+| [vertical_resolution](#vertical_resolution) | Vertical resolution (m) | time |
+| [vertical_visibility](#vertical_visibility) | Vertical visibility (m) | time |
+| [window_transmission](#window_transmission) | Window transmission estimate (%) | time |
+
 ### background_light
 
 Background light (mV)
@@ -304,6 +339,19 @@ cl2nc has not yet been extensively tested. If you have any doubts about
 the output, please check against values in the DAT file or send me the file.
 
 Peter Kuma <<peter.kuma@fastmail.com>>
+
+## FAQ
+
+### cl2nc fails with an exception.
+
+Please make sure you are using Python 2.7 and not Python 3, and you
+have the Python package netCDF4 installed. If it still does not work
+for you contact me: Peter Kuma <<peter.kuma@fastmail.com>>.
+
+### Where is the height information?
+
+Height can be determined from `vertical_resolution`. The instrument
+samples vertical bins on regular intervals.
 
 ## Changelog
 
