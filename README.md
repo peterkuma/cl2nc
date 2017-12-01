@@ -74,7 +74,7 @@ Missing values are encoded as NaN (floating-point variables) or -2147483648
 used in the given variable.
 
 | Variable | Description | Units | Dimensions |
-| --- | --- | --- |
+| --- | --- | --- | --- |
 | [background_light](#background_light) | Background light | mV | time |
 | [backscatter](#backscatter) | Attenuated volume backscatter coefficient | km<sup>-1</sup>.sr<sup>-1</sup> | time, level |
 | [backscatter_sum](#backscatter_sum) | Backscatter sum | sr<sup>-1</sup> | time |
