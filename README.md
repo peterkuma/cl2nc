@@ -24,14 +24,24 @@ Requirements:
 
 **Note:** Python 3 is currently not supported.
 
+On Windows [Anaconda/Python 2.7](https://www.anaconda.com/download/)
+distribution of Python is recommended.
+
 To install from the
-[Python Package Index (PyPI)](https://pypi.python.org/pypi/cl2nc) on Linux:
+[Python Package Index (PyPI)](https://pypi.python.org/pypi/cl2nc):
 
 ```sh
 pip install cl2nc
 ```
 
-From source:
+To install from the [Anaconda Cloud](https://anaconda.org/peterkuma/cl2nc)
+on Linux, Windows or Mac:
+
+```sh
+conda install -c peterkuma cl2nc
+```
+
+To install from source:
 
 ```sh
 pip install netCDF4
