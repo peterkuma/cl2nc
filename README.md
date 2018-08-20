@@ -374,7 +374,7 @@ functions to read the file (you may need to change the file extension to `.h5`).
 
 cl2nc follows [semantic versioning](http://semver.org/).
 
-### 3.0.0 (2018-07-17)
+### 3.0.0 (2018-08-20)
 
 - Changed `time` variable to contain time offset in seconds since
 1970-01-01 00:00:00 UTC.
