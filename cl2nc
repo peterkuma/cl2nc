@@ -1,6 +1,6 @@
 #!/usr/bin/env python2.7
 
-__version__ = '2.1.0'
+__version__ = '3.0.0'
 
 import signal
 signal.signal(signal.SIGINT, lambda signal, frame: sys.exit(0))
@@ -17,9 +17,17 @@ import datetime as dt
 import numpy as np
 from netCDF4 import Dataset
 
-NA_INT = -1<<31
+NA_INT32 = -1<<31
+NA_INT64 = -1<<63
 NA_FLOAT32 = np.nan
 NA_FLOAT64 = np.nan
+
+NA_NETCDF = {
+    'i4': NA_INT32,
+    'i8': NA_INT64,
+    'f4': NA_FLOAT32,
+    'f8': NA_FLOAT64,
+}
 
 re_line0 = re.compile('^-(?P<year>\d{4})-(?P<month>\d\d)-(?P<day>\d\d) (?P<hour>\d\d):(?P<minute>\d\d):(?P<second>\d\d)$')
 re_line1 = re.compile('^\x01CL(?P<unit>.)(?P<software_level>\d\d\d)(?P<message_number>\d)(?P<message_subclass>\d)\x02?$')
@@ -28,17 +36,17 @@ re_line3 = re.compile('^ (?P<sky_detection_status>..) +(?P<layer1_height>.{4}) +
 re_line4 = re.compile('^(?P<scale>.{5}) (?P<vertical_resolution>..) (?P<nsamples>.{4}) (?P<pulse_energy>...) (?P<laser_temperature>...) (?P<window_transmission>...) (?P<tilt_angle>..) (?P<background_light>.{4}) (?P<pulse_length>.)(?P<pulse_count>.{4})(?P<receiver_gain>.)(?P<receiver_bandwidth>.)(?P<sampling>..) (?P<backscatter_sum>...)$')
 re_line5 = re.compile('^(?P<backscatter>.*)$')
 re_line6 = re.compile('^\x03(?P<checksum>.{4})\x04$')
-re_line6x = re.compile('^(?P<time>\d+)$')
+re_line6x = re.compile('^(?P<time_utc>\d+)$')
 re_none = re.compile('^/* *$')
 
 def is_none(s):
     return re_none.match(s)
 
 def int_to_float(x):
-    return np.where(x != NA_INT, x, np.nan)
+    return np.where(x != NA_INT32, x, np.nan)
 
 def read_int(d, d2, var):
-    d2[var] = int(d[var]) if not is_none(d[var]) else NA_INT
+    d2[var] = int(d[var]) if not is_none(d[var]) else NA_INT32
 
 def read_str(d, d2, var):
     d2[var] = d[var]
@@ -60,7 +68,7 @@ def line0(s):
     if m is None: raise Exception('Invalid syntax for time format')
     d = m.groupdict()
     d2 = {}
-    d2['time'] = '%s-%s-%sT%s:%s:%s' % (
+    d2['time_utc'] = '%s-%s-%sT%s:%s:%s' % (
         d['year'],
         d['month'],
         d['day'],
@@ -98,22 +106,22 @@ def line2(s):
     d2['vertical_visibility'] = \
         d2['cbh_or_vertical_visibility'] \
         if d2['detection_status'] == '4' \
-        else NA_INT
+        else NA_INT32
 
     d2['cbh_1'] = \
         d2['cbh_or_vertical_visibility'] \
         if d2['detection_status'] in ('1', '2', '3') \
-        else NA_INT
+        else NA_INT32
 
     d2['cbh_2'] = \
         d2['cbh2_or_highest_signal'] \
         if d2['detection_status'] in ('2', '3') \
-        else NA_INT
+        else NA_INT32
 
     d2['highest_signal'] = \
         d2['cbh2_or_highest_signal'] \
         if d2['detection_status'] == '4' \
-        else NA_INT
+        else NA_INT32
 
     return d2
 
@@ -136,16 +144,16 @@ def line3(s):
     d2['layer1_cloud_amount'] = \
         d2['sky_detection_status'] \
         if d2['sky_detection_status'] >= 0 and d2['sky_detection_status'] <= 8 \
-        else NA_INT
+        else NA_INT32
 
     if not (
         d2['sky_detection_status'] >= 0 and
         d2['sky_detection_status'] <= 8
     ):
-        d2['layer2_cloud_amount'] = NA_INT
-        d2['layer3_cloud_amount'] = NA_INT
-        d2['layer4_cloud_amount'] = NA_INT
-        d2['layer5_cloud_amount'] = NA_INT
+        d2['layer2_cloud_amount'] = NA_INT32
+        d2['layer3_cloud_amount'] = NA_INT32
+        d2['layer4_cloud_amount'] = NA_INT32
+        d2['layer5_cloud_amount'] = NA_INT32
 
     return d2
 
@@ -192,10 +200,10 @@ def line6x(s):
         raise Exception('Invalid syntax for "line 6" format')
     d = m.groupdict()
     d2 = {}
-    read_int(d, d2, 'time')
-    d2['time'] = (
+    read_int(d, d2, 'time_utc')
+    d2['time_utc'] = (
         dt.datetime(1970, 1, 1) +
-        dt.timedelta(0, d2['time'])
+        dt.timedelta(0, d2['time_utc'])
     ).strftime('%Y-%m-%dT%H:%M:%S')
     return d2
 
@@ -218,17 +226,17 @@ def postprocess(d):
     layer_height_factor = 100 if d['units'] == 'ft' else 10
 
     if 'layer1_height' in d:
-        d['layer_height'] = NA_INT*np.ones(5)
+        d['layer_height'] = NA_INT32*np.ones(5)
         for i in range(5):
             d['layer_height'][i] = d['layer%d_height' % (i + 1)]
         d['layer_height'] = np.where(
-            d['layer_height'] != NA_INT,
+            d['layer_height'] != NA_INT32,
             d['layer_height']*layer_height_factor,
-            NA_INT
+            NA_INT32
         )
 
     if 'layer1_cloud_amount' in d:
-        d['layer_cloud_amount'] = NA_INT*np.ones(5)
+        d['layer_cloud_amount'] = NA_INT32*np.ones(5)
         for i in range(5):
             d['layer_cloud_amount'][i] = d['layer%d_cloud_amount' % (i + 1)]
 
@@ -241,18 +249,22 @@ def postprocess(d):
             'cbh_3',
         ]:
             d[var] = np.where(
-                d[var] != NA_INT,
+                d[var] != NA_INT32,
                 d[var]*0.3048,
-                NA_INT
+                NA_INT32
             )
 
     d['pulse_count'] = np.where(
-        d['pulse_count'] != NA_INT,
+        d['pulse_count'] != NA_INT32,
         d['pulse_count']*1024,
-        NA_INT
+        NA_INT32
     )
 
-    d['time'] = d.get('time', '')
+    d['time_utc'] = d.get('time_utc', '')
+    d['time'] = NA_INT64 if d['time_utc'] == '' else (
+        dt.datetime.strptime(d['time_utc'], '%Y-%m-%dT%H:%M:%S')
+        - dt.datetime(1970, 1, 1)
+    ).total_seconds()
 
 def crc16(buf):
     crc = 0xffff
@@ -360,20 +372,14 @@ def write_output(dd, filename):
 
     def write_var(var, dtype, attributes={}):
         if not var in vars: return
-        fill_value = {
-            'i4': NA_INT
-        }.get(dtype)
+        fill_value = NA_NETCDF.get(dtype)
         v = f.createVariable(var, dtype, ('time',), fill_value=fill_value)
         v[:] = np.array([d[var] for d in dd])
         v.setncatts(attributes)
 
     def write_profile(var, dtype, attributes={}):
         if not var in vars: return
-        fill_value = {
-            'i4': NA_INT,
-            'f4': NA_FLOAT32,
-            'f8': NA_FLOAT64,
-        }.get(dtype)
+        fill_value = NA_NETCDF.get(dtype)
         v = f.createVariable(var, dtype, ('time', 'level'), fill_value=fill_value)
         for i, d in enumerate(dd):
             x = d[var]
@@ -382,11 +388,7 @@ def write_output(dd, filename):
 
     def write_layer(var, dtype, attributes={}):
         if not var in vars: return
-        fill_value = {
-            'i4': NA_INT,
-            'f4': NA_FLOAT32,
-            'f8': NA_FLOAT64,
-        }.get(dtype)
+        fill_value = NA_NETCDF.get(dtype)
         v = f.createVariable(var, dtype, ('time', 'layer'), fill_value=fill_value)
         for i, d in enumerate(dd):
             x = d[var]
@@ -398,9 +400,13 @@ def write_output(dd, filename):
         v[:] = x
         v.setncatts(attributes)
 
-    write_var('time', 'S19', {
-        'long_name': 'Time',
+    write_var('time_utc', 'S19', {
+        'long_name': 'Time (UTC)',
         'units': 'ISO 8601',
+    })
+    write_var('time', 'i8', {
+        'long_name': 'Time',
+        'units': 'seconds since 1970-01-01 00:00:00 UTC',
     })
     write_dim('level', 'i4', level, {
         'long_name': 'Level number',

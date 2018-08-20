@@ -69,6 +69,8 @@ variables.
 The DAT files can alternatively contain values in feet
 (instead of meters), in which case all values are converted by cl2nc to meters.
 
+Time in DAT files is assumed to be UTC.
+
 Missing values are encoded as NaN (floating-point variables) or -2147483648
 (integer variables). The `_FillValue` attribute contains the missing value
 used in the given variable.
@@ -102,7 +104,8 @@ used in the given variable.
 | [status_internal](#status_internal) | Status internal | | time |
 | [status_warning](#status_warning) | Status warning | | time |
 | [tilt_angle](#tilt_angle) | Tilt angle | degrees | time |
-| [time](#time) | Time | ISO 8601 | time |
+| [time](#time) | Time | seconds since 1970-01-01 00:00:00 UTC | time |
+| [time_utc](#time_utc) | Time (UTC) | ISO 8601 | time |
 | [unit](#unit) | Unit identification character | | time |
 | [vertical_resolution](#vertical_resolution) | Vertical resolution | m | time |
 | [vertical_visibility](#vertical_visibility) | Vertical visibility | m | time |
@@ -299,7 +302,11 @@ Tilt angle (degrees from vertical)
 
 ### time
 
-Time (ISO 8601)
+Time (seconds since 1970-01-01 00:00:00 UTC, excluding leap seconds)
+
+### time_utc
+
+Time (UTC) (ISO 8601)
 
 ### unit
 
@@ -357,9 +364,21 @@ for you contact me: Peter Kuma <<peter.kuma@fastmail.com>>.
 Height can be determined from [vertical_resolution](#vertical_resolution).
 The instrument samples vertical bins on regular intervals.
 
+### MATLAB cannot read the time_utc variable.
+
+MATLAB NetCDF implementation currently does not support reading NC_STRING
+variables. You can use the `time` variable instead or use the MATLAB HDF
+functions to read the file (you may need to change the file extension to `.h5`).
+
 ## Changelog
 
 cl2nc follows [semantic versioning](http://semver.org/).
+
+### 3.0.0 (2018-07-17)
+
+- Changed `time` variable to contain time offset in seconds since
+1970-01-01 00:00:00 UTC.
+`time_utc` contains the original time values (UTC as ISO 8601 strings).
 
 ### 2.1.0 (2017-11-25)
 
