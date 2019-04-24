@@ -18,14 +18,26 @@ See [example.zip](example.zip) for an example input and output.
 
 ## Installation
 
+Supported operating systems:
+
+- Linux
+- Windows
+- macOS
+
 Requirements:
 
 - Python 2.7
 
 **Note:** Python 3 is currently not supported.
 
-On Windows [Anaconda/Python 2.7](https://www.anaconda.com/download/)
-distribution of Python is recommended.
+On Windows and macOS [Anaconda/Python 2.7](https://www.anaconda.com/download/)
+distribution of Python is recommended. On Linux, use Python 2.7 which comes         
+with your Linux distribution (either built-in, or installed through a           
+package manager).
+
+The following commands should be run in the **Terminal** (Linux and macOS)           
+or **Anaconda Prompt** (Windows – you can find Anaconda Prompt in the
+Start menu).
 
 To install from the
 [Python Package Index (PyPI)](https://pypi.python.org/pypi/cl2nc):
@@ -41,11 +53,20 @@ or to install in the user's home directory
 pip install cl2nc --user
 ```
 
-Alternatively, to install from source:
+Alternatively, to install from source, download and unpack the latest
+[cl2nc](https://github.com/peterkuma/cl2nc/archive/master.zip) archive, or
+clone the repository from GitHub
+(`git clone https://github.com/peterkuma/cl2nc.git`). In the package
+directory, run the following commands:
 
 ```sh
 pip install netCDF4
 python setup.py install
+
+# or to install in the user's home directory
+# (make sure `~/.local/bin` is in the `PATH` environment variable):
+
+python setup.py install --user
 ```
 
 You can also use the Python script `cl2nc` directly without installation
