@@ -399,3 +399,9 @@ cl2nc follows [semantic versioning](http://semver.org/).
 - Added NetCDF file attributes: `software`, `version`, `created`.
 - Format time with `T` as delimiter to conform to ISO 8601.
 - Improved error handling.
+
+## See also
+
+[ccplot](https://ccplot.org),
+[mpl2nc](https://github.com/peterkuma/mpl2nc)
+[mrr2c](https://github.com/peterkuma/mrr2c),
