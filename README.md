@@ -1,7 +1,7 @@
 # cl2nc
 
-cl2nc is a command-line Python program for converting Vaisala CL51 and CL31 dat
-files to NetCDF.
+cl2nc is an open source command line Python program for converting Vaisala
+CL51 and CL31 ceilometer dat files to NetCDF.
 
 ## Example
 
@@ -366,7 +366,8 @@ Time when the NetCDF file was created (ISO 8601 UTC).
 
 ## License
 
-MIT License (see [LICENSE.md](LICENSE.md))
+This software is open source and can be used, shared and modified freely
+under the terms of the MIT License (see [LICENSE.md](LICENSE.md)).
 
 ## Support
 
