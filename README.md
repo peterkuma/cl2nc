@@ -31,11 +31,11 @@ Requirements:
 **Note:** Python 3 is currently not supported.
 
 On Windows and macOS [Anaconda/Python 2.7](https://www.anaconda.com/download/)
-distribution of Python is recommended. On Linux, use Python 2.7 which comes         
-with your Linux distribution (either built-in, or installed through a           
+distribution of Python is recommended. On Linux, use Python 2.7 which comes
+with your Linux distribution (either built-in, or installed through a
 package manager).
 
-The following commands should be run in the **Terminal** (Linux and macOS)           
+The following commands should be run in the **Terminal** (Linux and macOS)
 or **Anaconda Prompt** (Windows – you can find Anaconda Prompt in the
 Start menu).
 
@@ -71,6 +71,9 @@ python setup.py install --user
 
 You can also use the Python script `cl2nc` directly without installation
 (as long as netCDF4 is installed).
+
+Once installed, you should be able to run `cl2nc` in the Terminal
+(Linux and macOS) or Anaconda Prompt (Windows).
 
 ## Usage
 
