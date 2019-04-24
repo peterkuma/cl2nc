@@ -16,7 +16,7 @@ of a NetCDF output file.
 
 See [example.zip](example.zip) for an example input and output.
 
-## Install
+## Installation
 
 Requirements:
 
@@ -34,14 +34,14 @@ To install from the
 pip install cl2nc
 ```
 
-To install from the [Anaconda Cloud](https://anaconda.org/peterkuma/cl2nc)
-on Linux, Windows or Mac:
+or to install in the user's home directory
+(make sure `~/.local/bin` is in the `PATH` environment variable):
 
 ```sh
-conda install -c peterkuma cl2nc
+pip install cl2nc --user
 ```
 
-To install from source:
+Alternatively, to install from source:
 
 ```sh
 pip install netCDF4
