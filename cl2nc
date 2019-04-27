@@ -1,6 +1,6 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python
 
-__version__ = '3.0.0'
+__version__ = '3.1.0'
 
 import signal
 signal.signal(signal.SIGINT, lambda signal, frame: sys.exit(0))
@@ -29,15 +29,21 @@ NA_NETCDF = {
     'f8': NA_FLOAT64,
 }
 
-re_line0 = re.compile('^-(?P<year>\d{4})-(?P<month>\d\d)-(?P<day>\d\d) (?P<hour>\d\d):(?P<minute>\d\d):(?P<second>\d\d)$')
-re_line1 = re.compile('^\x01CL(?P<unit>.)(?P<software_level>\d\d\d)(?P<message_number>\d)(?P<message_subclass>\d)\x02?$')
-re_line2 = re.compile('^(?P<detection_status>.)(?P<self_check>.) (?P<cbh_or_vertical_visibility>.{5}) (?P<cbh2_or_highest_signal>.{5}) (?P<cbh_3>.{5}) (?P<status_alarm>.{4})(?P<status_warning>.{4})(?P<status_internal>.{4})$')
-re_line3 = re.compile('^ (?P<sky_detection_status>..) +(?P<layer1_height>.{4}) +(?P<layer2_cloud_amount>.) +(?P<layer2_height>.{4}) +(?P<layer3_cloud_amount>.) +(?P<layer3_height>.{4}) +(?P<layer4_cloud_amount>.) +(?P<layer4_height>.{4}) +(?P<layer5_cloud_amount>.) +(?P<layer5_height>.{3,4})$')
-re_line4 = re.compile('^(?P<scale>.{5}) (?P<vertical_resolution>..) (?P<nsamples>.{4}) (?P<pulse_energy>...) (?P<laser_temperature>...) (?P<window_transmission>...) (?P<tilt_angle>..) (?P<background_light>.{4}) (?P<pulse_length>.)(?P<pulse_count>.{4})(?P<receiver_gain>.)(?P<receiver_bandwidth>.)(?P<sampling>..) (?P<backscatter_sum>...)$')
-re_line5 = re.compile('^(?P<backscatter>.*)$')
-re_line6 = re.compile('^\x03(?P<checksum>.{4})\x04$')
-re_line6x = re.compile('^(?P<time_utc>\d+)$')
-re_none = re.compile('^/* *$')
+re_line0 = re.compile(b'^-(?P<year>\d{4})-(?P<month>\d\d)-(?P<day>\d\d) (?P<hour>\d\d):(?P<minute>\d\d):(?P<second>\d\d)$')
+re_line1 = re.compile(b'^\x01CL(?P<unit>.)(?P<software_level>\d\d\d)(?P<message_number>\d)(?P<message_subclass>\d)\x02?$')
+re_line2 = re.compile(b'^(?P<detection_status>.)(?P<self_check>.) (?P<cbh_or_vertical_visibility>.{5}) (?P<cbh2_or_highest_signal>.{5}) (?P<cbh_3>.{5}) (?P<status_alarm>.{4})(?P<status_warning>.{4})(?P<status_internal>.{4})$')
+re_line3 = re.compile(b'^ (?P<sky_detection_status>..) +(?P<layer1_height>.{4}) +(?P<layer2_cloud_amount>.) +(?P<layer2_height>.{4}) +(?P<layer3_cloud_amount>.) +(?P<layer3_height>.{4}) +(?P<layer4_cloud_amount>.) +(?P<layer4_height>.{4}) +(?P<layer5_cloud_amount>.) +(?P<layer5_height>.{3,4})$')
+re_line4 = re.compile(b'^(?P<scale>.{5}) (?P<vertical_resolution>..) (?P<nsamples>.{4}) (?P<pulse_energy>...) (?P<laser_temperature>...) (?P<window_transmission>...) (?P<tilt_angle>..) (?P<background_light>.{4}) (?P<pulse_length>.)(?P<pulse_count>.{4})(?P<receiver_gain>.)(?P<receiver_bandwidth>.)(?P<sampling>..) (?P<backscatter_sum>...)$')
+re_line5 = re.compile(b'^(?P<backscatter>.*)$')
+re_line6 = re.compile(b'^\x03(?P<checksum>.{4})\x04$')
+re_line6x = re.compile(b'^(?P<time_utc>\d+)$')
+re_none = re.compile(b'^/* *$')
+
+def fsencode(x):
+    return os.fsencode(x) if sys.version_info[0] > 2 else x
+
+def fsdecode(x):
+    return os.fsdecode(x) if sys.version_info[0] > 2 else x
 
 def is_none(s):
     return re_none.match(s)
@@ -61,14 +67,14 @@ def read_hex_array(d, d2, var, k):
     for i in range(0, n, k):
         y = x[i:min(i + k, n)]
         z = int(y, 16)
-        d2[var][i/k] = z if z < (1<<(k*4 - 1)) else z - (1<<(k*4))
+        d2[var][int(i/k)] = z if z < (1<<(k*4 - 1)) else z - (1<<(k*4))
 
 def line0(s):
     m = re_line0.match(s)
     if m is None: raise Exception('Invalid syntax for time format')
     d = m.groupdict()
     d2 = {}
-    d2['time_utc'] = '%s-%s-%sT%s:%s:%s' % (
+    d2['time_utc'] = b'%s-%s-%sT%s:%s:%s' % (
         d['year'],
         d['month'],
         d['day'],
@@ -105,22 +111,22 @@ def line2(s):
 
     d2['vertical_visibility'] = \
         d2['cbh_or_vertical_visibility'] \
-        if d2['detection_status'] == '4' \
+        if d2['detection_status'] == b'4' \
         else NA_INT32
 
     d2['cbh_1'] = \
         d2['cbh_or_vertical_visibility'] \
-        if d2['detection_status'] in ('1', '2', '3') \
+        if d2['detection_status'] in (b'1', b'2', b'3') \
         else NA_INT32
 
     d2['cbh_2'] = \
         d2['cbh2_or_highest_signal'] \
-        if d2['detection_status'] in ('2', '3') \
+        if d2['detection_status'] in (b'2', b'3') \
         else NA_INT32
 
     d2['highest_signal'] = \
         d2['cbh2_or_highest_signal'] \
-        if d2['detection_status'] == '4' \
+        if d2['detection_status'] == b'4' \
         else NA_INT32
 
     return d2
@@ -204,7 +210,7 @@ def line6x(s):
     d2['time_utc'] = (
         dt.datetime(1970, 1, 1) +
         dt.timedelta(0, d2['time_utc'])
-    ).strftime('%Y-%m-%dT%H:%M:%S')
+    ).strftime(b'%Y-%m-%dT%H:%M:%S')
     return d2
 
 def check(d):
@@ -262,14 +268,14 @@ def postprocess(d):
 
     d['time_utc'] = d.get('time_utc', '')
     d['time'] = NA_INT64 if d['time_utc'] == '' else (
-        dt.datetime.strptime(d['time_utc'], '%Y-%m-%dT%H:%M:%S')
+        dt.datetime.strptime(d['time_utc'].decode('ascii'), '%Y-%m-%dT%H:%M:%S')
         - dt.datetime(1970, 1, 1)
     ).total_seconds()
 
 def crc16(buf):
     crc = 0xffff
     for i in range(len(buf)):
-        crc = crc^(ord(buf[i]) << 8) & 0xffff
+        crc = crc^(ord(buf[i:(i+1)]) << 8) & 0xffff
         for j in range(8):
             xmask = 0x1021 if (crc & 0x8000) else 0
             crc = (crc<<1) & 0xffff
@@ -291,10 +297,10 @@ def read_input(filename, options={}):
             line_number += 1
             linex = line.rstrip()
 
-            if linex == '':
+            if linex == b'':
                 continue
 
-            if linex.startswith('-') and not re_line0.match(linex):
+            if linex.startswith(b'-') and not re_line0.match(linex):
                 continue
 
             while True:
@@ -333,7 +339,7 @@ def read_input(filename, options={}):
                     elif stage == 6:
                         try:
                             d.update(line6(linex))
-                            d['message'] += line[0]
+                            d['message'] += line[0:1]
                         except:
                             d.update(line6x(linex))
                         if options['check']: check(d)
@@ -343,27 +349,23 @@ def read_input(filename, options={}):
                     else:
                         raise Exception()
                 except Exception as e:
-                    s = (''.join(traceback.format_exception_only(type(e), e)))
-                    raise \
-                        Exception, \
-                        'Error on line %d: %s' % (
-                            line_number,
-                            s.strip(),
-                        ), \
-                        sys.exc_info()[2]
+                    raise ValueError('Error on line %d: %s' % (
+                        line_number,
+                        traceback.format_exc()
+                    ))
                 break
         return dd
 
 def write_output(dd, filename):
     n = len(dd)
-    vars = list(set(itertools.chain(*[d.keys() for d in dd])))
+    vars = list(set(itertools.chain(*[list(d.keys()) for d in dd])))
     m = np.max([0] + [len(d['backscatter']) for d in dd])
 
-    if os.path.dirname(filename) != '' and \
+    if os.path.dirname(filename) != b'' and \
         not os.path.exists(os.path.dirname(filename)):
-        raise Exception('%s: No such file or directory' % filename)
+        raise Exception('%s: No such file or directory' % fsdecode(filename))
 
-    f = Dataset(filename, 'w', format='NETCDF4')
+    f = Dataset(fsdecode(filename), 'w', format='NETCDF4')
     f.createDimension('time', n)
     f.createDimension('level', m)
     f.createDimension('layer', 5)
@@ -553,11 +555,37 @@ if __name__ == '__main__':
         action='store_true',
         help='enable checksum verification (slow)'
     )
+    parser.add_argument('-q',
+        dest='quiet',
+        action='store_true',
+        help='run quietly (suppress output)'
+    )
     parser.add_argument('input', help='input file')
     parser.add_argument('output', help='output file')
     args = parser.parse_args()
+    
+    input_ = fsencode(args.input)
+    output = fsencode(args.output)
 
-    dd = read_input(args.input, {
-        'check': args.check
-    })
-    write_output(dd, args.output)
+    if os.path.isdir(input_):
+        for file_ in sorted([fsencode(x) for x in os.listdir(input_)]):
+            if not (file_.endswith(b'.dat') or file_.endswith(b'.DAT')):
+                continue
+            input_filename = os.path.join(input_, file_)
+            output_filename = os.path.join(
+                output,
+                os.path.splitext(file_)[0] + b'.nc'
+            )
+            if not args.quiet:
+                print(fsdecode(input_filename))
+            try:
+                dd = read_input(input_filename, {'check': args.check})
+                write_output(dd, output_filename)
+            except Exception as e:
+                logging.error(e)
+    else:
+        try:
+            dd = read_input(input_, {'check': args.check})
+            write_output(dd, output)
+        except:
+            logging.error(e)

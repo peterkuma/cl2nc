@@ -26,18 +26,17 @@ Supported operating systems:
 
 Requirements:
 
-- Python 2.7
+- Python 2.7 or Python 3
 
-**Note:** Python 3 is currently not supported.
-
-On Windows and macOS [Anaconda/Python 2.7](https://www.anaconda.com/download/)
-distribution of Python is recommended. On Linux, use Python 2.7 which comes
-with your Linux distribution (either built-in, or installed through a
-package manager).
+On Windows and macOS [Anaconda](https://www.anaconda.com/download/)
+distribution of Python is recommended. On Linux, use Python
+which comes with your Linux distribution (either built-in, or installed through
+a package manager).
 
 The following commands should be run in the **Terminal** (Linux and macOS)
 or **Anaconda Prompt** (Windows – you can find Anaconda Prompt in the
-Start menu).
+Start menu). To install with Python 3 instead of Python 2, replace `pip` with
+`pip3` and `python` with `python3` in the commands below.
 
 To install from the
 [Python Package Index (PyPI)](https://pypi.python.org/pypi/cl2nc):
@@ -78,12 +77,16 @@ Once installed, you should be able to run `cl2nc` in the Terminal
 ## Usage
 
 ```sh
-cl2nc [-c] <input> <output>
+cl2nc [-cq] <input> <output>
 ```
 
-- `input` – input dat file
-- `output` – output NetCDF file
+- `input` – input dat file or a directory
+- `output` – output NetCDF file or a directory
 - `-c` – enable checksum verification (slow)
+- `-q` – run quietly (suppress output)
+
+If directories are supplied as `input` and `output`, all files ending
+with `.dat` or `.DAT` in `input` are converted and written to `output`.
 
 ## Variables
 
@@ -399,6 +402,11 @@ functions to read the file (you may need to change the file extension to `.h5`).
 ## Changelog
 
 cl2nc follows [semantic versioning](http://semver.org/).
+
+### 3.1.0 (2019-04-27)
+
+- Support for Python 3
+- Accept directory input and output arguments
 
 ### 3.0.0 (2018-08-20)
 
