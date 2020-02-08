@@ -88,7 +88,7 @@ Options:
 
 - `-c`: Enable checksum verification (slow).
 - `--debug`: Enable debugging output.
-- '--help': Show help message and exit.
+- `--help`: Show help message and exit.
 - `-q`: Run quietly (suppress output).
 
 A manual page is also available if cl2nc is installed on unix-like operating
