@@ -392,9 +392,11 @@ or submit a [GitHub Issue](https://github.com/peterkuma/cl2nc/issues).
 
 ### cl2nc fails with an exception.
 
-Please make sure you are using Python 2.7 and not Python 3, and you
-have the Python package netCDF4 installed. If it still does not work
+Please make sure you that 
+the Python package netCDF4 is installed. If it still does not work
 for you contact me: Peter Kuma <<peter.kuma@fastmail.com>>.
+There are small variations in the .DAT file format with instruments.
+cl2nc may need to be modified to be able to read a particular type of format.
 
 ### Where is the height information?
 
