@@ -77,22 +77,26 @@ Once installed, you should be able to run `cl2nc` in the Terminal
 ## Usage
 
 ```sh
-cl2nc [-cq] [--debug] <input> <output>
+cl2nc [-chq] [--debug] [--help] <input> <output>
 ```
 
-Arguments:
-
-- `input` – input dat file or a directory
-- `output` – output NetCDF file or a directory
+`<input>` is an input `.dat` file. `<output>` is an output `.nc` file.
+If directories are supplied for `<input>` and `<output>`, all `.dat` and `.DAT`
+files in `<input>` are converted to `.nc` files in `<output>`.
 
 Options:
 
-- `-c` – enable checksum verification (slow)
-- `--debug` – enable debugging output
-- `-q` – run quietly (suppress output)
+- `-c`: Enable checksum verification (slow).
+- `--debug`: Enable debugging output.
+- '--help': Show help message and exit.
+- `-q`: Run quietly (suppress output).
 
-If directories are supplied as `input` and `output`, all files ending
-with `.dat` or `.DAT` in `input` are converted and written to `output`.
+A manual page is also available if cl2nc is installed on unix-like operating
+systems:
+
+```sh
+man cl2nc
+```
 
 ## Variables
 
@@ -409,16 +413,20 @@ functions to read the file (you may need to change the file extension to `.h5`).
 
 cl2nc follows [semantic versioning](http://semver.org/).
 
+### 3.2.1 (2020-02-08)
+
+- Added manual page.
+
 ### 3.2.0 (2020-02-08)
 
 - Support for an alternative DAT format with UNIX timestamps.
-- Improve error logging.
+- Improved error logging.
 - New option: `--debug`.
 
 ### 3.1.0 (2019-04-27)
 
-- Support for Python 3
-- Accept directory input and output arguments
+- Support for Python 3.
+- Accept directory input and output arguments.
 
 ### 3.0.0 (2018-08-20)
 
