@@ -1,19 +1,19 @@
 #!/usr/bin/env python
 
-__version__ = '3.1.0'
-
-import signal
-signal.signal(signal.SIGINT, lambda signal, frame: sys.exit(0))
+__version__ = '3.2.0'
 
 import sys
+import signal
+signal.signal(signal.SIGINT, lambda signal, frame: sys.exit(0))
+import logging
+logging.basicConfig(format='%(name)s: %(message)s')
+log = logging.getLogger(sys.argv[0])
 import os
 import traceback
 import re
 import itertools
-import logging
 import argparse
 import datetime as dt
-
 import numpy as np
 from netCDF4 import Dataset
 
@@ -30,6 +30,7 @@ NA_NETCDF = {
 }
 
 re_line0 = re.compile(b'^-(?P<year>\d{4})-(?P<month>\d\d)-(?P<day>\d\d) (?P<hour>\d\d):(?P<minute>\d\d):(?P<second>\d\d)$')
+re_line0x = re.compile(b'^(?P<unix_time>\d*\.?\d*)$')
 re_line1 = re.compile(b'^\x01CL(?P<unit>.)(?P<software_level>\d\d\d)(?P<message_number>\d)(?P<message_subclass>\d)\x02?$')
 re_line2 = re.compile(b'^(?P<detection_status>.)(?P<self_check>.) (?P<cbh_or_vertical_visibility>.{5}) (?P<cbh2_or_highest_signal>.{5}) (?P<cbh_3>.{5}) (?P<status_alarm>.{4})(?P<status_warning>.{4})(?P<status_internal>.{4})$')
 re_line3 = re.compile(b'^ (?P<sky_detection_status>..) +(?P<layer1_height>.{4}) +(?P<layer2_cloud_amount>.) +(?P<layer2_height>.{4}) +(?P<layer3_cloud_amount>.) +(?P<layer3_height>.{4}) +(?P<layer4_cloud_amount>.) +(?P<layer4_height>.{4}) +(?P<layer5_cloud_amount>.) +(?P<layer5_height>.{3,4})$')
@@ -71,7 +72,7 @@ def read_hex_array(d, d2, var, k):
 
 def line0(s):
     m = re_line0.match(s)
-    if m is None: raise Exception('Invalid syntax for time format')
+    if m is None: raise ValueError('Invalid syntax for time format')
     d = m.groupdict()
     d2 = {}
     d2['time_utc'] = b'%s-%s-%sT%s:%s:%s' % (
@@ -84,9 +85,18 @@ def line0(s):
     )
     return d2
 
+def line0x(s):
+    m = re_line0x.match(s)
+    if m is None: raise ValueError('Invalid syntax for time format')
+    d = m.groupdict()
+    d2 = {}
+    time = dt.datetime(1970,1,1) + dt.timedelta(seconds=float(d['unix_time']))
+    d2['time_utc'] = time.strftime(u'%Y-%m-%dT%H:%M:%S').encode('ascii')
+    return d2
+
 def line1(s):
     m = re_line1.match(s)
-    if m is None: raise Exception('Invalid syntax for "line 1" format')
+    if m is None: raise ValueError('Invalid syntax for "line 1" format')
     d = m.groupdict()
     d2 = {}
     read_str(d, d2, 'unit')
@@ -97,7 +107,7 @@ def line1(s):
 
 def line2(s):
     m = re_line2.match(s)
-    if m is None: raise Exception('Invalid syntax for "line 2" format')
+    if m is None: raise ValueError('Invalid syntax for "line 2" format')
     d = m.groupdict()
     d2 = {}
     read_str(d, d2, 'detection_status')
@@ -133,7 +143,7 @@ def line2(s):
 
 def line3(s):
     m = re_line3.match(s)
-    if m is None: raise Exception('Invalid syntax for "line 3" format')
+    if m is None: raise ValueError('Invalid syntax for "line 3" format')
     d = m.groupdict()
     d2 = {}
     read_int(d, d2, 'sky_detection_status')
@@ -165,7 +175,7 @@ def line3(s):
 
 def line4(s):
     m = re_line4.match(s)
-    if m is None: raise Exception('Invalid syntax for "line 4" format')
+    if m is None: raise ValueError('Invalid syntax for "line 4" format')
     d = m.groupdict()
     d2 = {}
     read_int(d, d2, 'scale')
@@ -185,7 +195,7 @@ def line4(s):
 
 def line5(s):
     m = re_line5.match(s)
-    if m is None: raise Exception('Invalid syntax for "line 5" format')
+    if m is None: raise ValueError('Invalid syntax for "line 5" format')
     d = m.groupdict()
     d2 = {}
     read_hex_array(d, d2, 'backscatter', 5)
@@ -194,7 +204,7 @@ def line5(s):
 def line6(s):
     m = re_line6.match(s)
     if m is None:
-        raise Exception('Invalid syntax for "line 6" format')
+        raise ValueError('Invalid syntax for "line 6" format')
     d = m.groupdict()
     d2 = {}
     read_hex(d, d2, 'checksum')
@@ -203,7 +213,7 @@ def line6(s):
 def line6x(s):
     m = re_line6x.match(s)
     if m is None:
-        raise Exception('Invalid syntax for "line 6" format')
+        raise ValueError('Invalid syntax for "line 6" format')
     d = m.groupdict()
     d2 = {}
     read_int(d, d2, 'time_utc')
@@ -215,7 +225,7 @@ def line6x(s):
 
 def check(d):
     if 'checksum' in d and crc16(d['message']) != d['checksum']:
-        raise Exception('Invalid checksum')
+        raise ValueError('Invalid checksum')
 
 def postprocess(d):
     for var in [
@@ -254,11 +264,12 @@ def postprocess(d):
             'cbh_2',
             'cbh_3',
         ]:
-            d[var] = np.where(
-                d[var] != NA_INT32,
-                d[var]*0.3048,
-                NA_INT32
-            )
+            if var in d:
+                d[var] = np.where(
+                    d[var] != NA_INT32,
+                    d[var]*0.3048,
+                    NA_INT32
+                )
 
     d['pulse_count'] = np.where(
         d['pulse_count'] != NA_INT32,
@@ -307,11 +318,10 @@ def read_input(filename, options={}):
                 try:
                     if stage == 0:
                         d = {}
-                        try:
+                        if re_line0.match(linex):
                             d.update(line0(linex))
-                        except:
-                            stage = 1
-                            continue
+                        elif re_line0x.match(linex):
+                            d.update(line0x(linex))
                         stage = 1
                     elif stage == 1:
                         d.update(line1(linex))
@@ -347,12 +357,14 @@ def read_input(filename, options={}):
                         dd.append(d)
                         stage = 0
                     else:
-                        raise Exception()
+                        raise RuntimeError('Invalid decoding stage')
                 except Exception as e:
-                    raise ValueError('Error on line %d: %s' % (
-                        line_number,
-                        traceback.format_exc()
+                    t, v, tb = sys.exc_info()
+                    log.error('Error on line %d: %s' % (
+                        line_number, e
                     ))
+                    log.debug(traceback.format_exc())
+                    return []
                 break
         return dd
 
@@ -560,9 +572,17 @@ if __name__ == '__main__':
         action='store_true',
         help='run quietly (suppress output)'
     )
+    parser.add_argument('--debug',
+        dest='debug',
+        action='store_true',
+        help='print debugging information',
+    )
     parser.add_argument('input', help='input file')
     parser.add_argument('output', help='output file')
     args = parser.parse_args()
+
+    if args.debug:
+        log.setLevel('DEBUG')
     
     input_ = fsencode(args.input)
     output = fsencode(args.output)
@@ -580,12 +600,16 @@ if __name__ == '__main__':
                 print(fsdecode(input_filename))
             try:
                 dd = read_input(input_filename, {'check': args.check})
-                write_output(dd, output_filename)
+                if len(dd) > 0:
+                    write_output(dd, output_filename)
             except Exception as e:
-                logging.error(e)
+                log.error(e)
+                log.debug(traceback.format_exc())
     else:
         try:
             dd = read_input(input_, {'check': args.check})
-            write_output(dd, output)
-        except:
-            logging.error(e)
+            if len(dd) > 0:
+                write_output(dd, output)
+        except Exception as e:
+            log.error(e)
+            log.debug(traceback.format_exc())

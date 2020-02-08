@@ -77,12 +77,18 @@ Once installed, you should be able to run `cl2nc` in the Terminal
 ## Usage
 
 ```sh
-cl2nc [-cq] <input> <output>
+cl2nc [-cq] [--debug] <input> <output>
 ```
+
+Arguments:
 
 - `input` – input dat file or a directory
 - `output` – output NetCDF file or a directory
+
+Options:
+
 - `-c` – enable checksum verification (slow)
+- `--debug` – enable debugging output
 - `-q` – run quietly (suppress output)
 
 If directories are supplied as `input` and `output`, all files ending
@@ -402,6 +408,12 @@ functions to read the file (you may need to change the file extension to `.h5`).
 ## Changelog
 
 cl2nc follows [semantic versioning](http://semver.org/).
+
+### 3.2.0 (2020-02-08)
+
+- Support for an alternative DAT format with UNIX timestamps.
+- Improve error logging.
+- New option: `--debug`.
 
 ### 3.1.0 (2019-04-27)
 
