@@ -384,10 +384,8 @@ under the terms of the MIT License (see [LICENSE.md](LICENSE.md)).
 
 ## Support
 
-cl2nc has not yet been extensively tested. If you have any doubts about
-the output, please check against values in the DAT file or send me the file.
-
-You can contact me at Peter Kuma <<peter.kuma@fastmail.com>>,
+If you encouter any issues with cl2nc you can
+contact me at Peter Kuma <<peter.kuma@fastmail.com>>,
 or submit a [GitHub Issue](https://github.com/peterkuma/cl2nc/issues).
 
 ## FAQ
