@@ -385,16 +385,16 @@ under the terms of the MIT License (see [LICENSE.md](LICENSE.md)).
 ## Support
 
 If you encouter any issues with cl2nc you can
-contact me at Peter Kuma <<peter.kuma@fastmail.com>>,
+contact me at Peter Kuma <<peter@peterkuma.net>>,
 or submit a [GitHub Issue](https://github.com/peterkuma/cl2nc/issues).
 
 ## FAQ
 
 ### cl2nc fails with an exception.
 
-Please make sure you that 
+Please make sure you that
 the Python package netCDF4 is installed. If it still does not work
-for you contact me: Peter Kuma <<peter.kuma@fastmail.com>>.
+for you contact me: Peter Kuma <<peter@peterkuma.net>>.
 There are small variations in the .DAT file format with instruments.
 cl2nc may need to be modified to be able to read a particular type of format.
 
