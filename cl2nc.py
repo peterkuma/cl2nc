@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-__version__ = '3.2.1'
+__version__ = '3.2.2'
 
 import sys
 import signal
@@ -560,7 +560,7 @@ def write_output(dd, filename):
 
     f.close()
 
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser(description='Convert Vaisala CL51 and CL31 dat files to NetCDF')
     parser.add_argument('-c',
         dest='check',
@@ -613,3 +613,6 @@ if __name__ == '__main__':
         except Exception as e:
             log.error(e)
             log.debug(traceback.format_exc())
+
+if __name__ == '__main__':
+    main()

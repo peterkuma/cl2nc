@@ -413,6 +413,10 @@ functions to read the file (you may need to change the file extension to `.h5`).
 
 cl2nc follows [semantic versioning](http://semver.org/).
 
+### 3.2.2 (2020-07-17)
+
+- Fixed installation on Windows.
+
 ### 3.2.1 (2020-02-08)
 
 - Added manual page.

@@ -4,12 +4,15 @@ from setuptools import setup, find_packages
 
 setup(
     name='cl2nc',
-    version='3.2.1',
+    version='3.2.2',
     description='Convert Vaisala CL51 and CL31 dat files to NetCDF',
     author='Peter Kuma',
     author_email='peter.kuma@fastmail.com',
     license='MIT',
-    scripts=['cl2nc'],
+    py_modules=['cl2nc'],
+    entry_points={
+        'console_scripts': ['cl2nc=cl2nc:main'],
+    },
     data_files=[('share/man/man1', ['cl2nc.1'])],
     install_requires=['netCDF4>=1.2.9'],
     keywords=['vaisala', 'ceilometer', 'cl51', 'cl31', 'netcdf', 'lidar'],
