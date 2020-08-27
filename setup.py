@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='cl2nc',
-    version='3.2.2',
+    version='3.3.0',
     description='Convert Vaisala CL51 and CL31 dat files to NetCDF',
     author='Peter Kuma',
     author_email='peter@peterkuma.net',

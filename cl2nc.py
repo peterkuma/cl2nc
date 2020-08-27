@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-__version__ = '3.2.2'
+__version__ = '3.3.0'
 
 import sys
 import signal
@@ -29,15 +29,14 @@ NA_NETCDF = {
     'f8': NA_FLOAT64,
 }
 
-re_line0 = re.compile(b'^-(?P<year>\d{4})-(?P<month>\d\d)-(?P<day>\d\d) (?P<hour>\d\d):(?P<minute>\d\d):(?P<second>\d\d)$')
-re_line0x = re.compile(b'^(?P<unix_time>\d*\.?\d*)$')
+re_line_time_1 = re.compile(b'^-?(?P<year>\d{4})-(?P<month>\d\d)-(?P<day>\d\d) (?P<hour>\d\d):(?P<minute>\d\d):(?P<second>\d\d)$')
+re_line_time_2 = re.compile(b'^(?P<unix_time>\d*\.?\d*)$')
 re_line1 = re.compile(b'^\x01CL(?P<unit>.)(?P<software_level>\d\d\d)(?P<message_number>\d)(?P<message_subclass>\d)\x02?$')
 re_line2 = re.compile(b'^(?P<detection_status>.)(?P<self_check>.) (?P<cbh_or_vertical_visibility>.{5}) (?P<cbh2_or_highest_signal>.{5}) (?P<cbh_3>.{5}) (?P<status_alarm>.{4})(?P<status_warning>.{4})(?P<status_internal>.{4})$')
 re_line3 = re.compile(b'^ (?P<sky_detection_status>..) +(?P<layer1_height>.{4}) +(?P<layer2_cloud_amount>.) +(?P<layer2_height>.{4}) +(?P<layer3_cloud_amount>.) +(?P<layer3_height>.{4}) +(?P<layer4_cloud_amount>.) +(?P<layer4_height>.{4}) +(?P<layer5_cloud_amount>.) +(?P<layer5_height>.{3,4})$')
 re_line4 = re.compile(b'^(?P<scale>.{5}) (?P<vertical_resolution>..) (?P<nsamples>.{4}) (?P<pulse_energy>...) (?P<laser_temperature>...) (?P<window_transmission>...) (?P<tilt_angle>..) (?P<background_light>.{4}) (?P<pulse_length>.)(?P<pulse_count>.{4})(?P<receiver_gain>.)(?P<receiver_bandwidth>.)(?P<sampling>..) (?P<backscatter_sum>...)$')
 re_line5 = re.compile(b'^(?P<backscatter>.*)$')
 re_line6 = re.compile(b'^\x03(?P<checksum>.{4})\x04$')
-re_line6x = re.compile(b'^(?P<time_utc>\d+)$')
 re_none = re.compile(b'^/* *$')
 
 def fsencode(x):
@@ -70,28 +69,28 @@ def read_hex_array(d, d2, var, k):
         z = int(y, 16)
         d2[var][int(i/k)] = z if z < (1<<(k*4 - 1)) else z - (1<<(k*4))
 
-def line0(s):
-    m = re_line0.match(s)
-    if m is None: raise ValueError('Invalid syntax for time format')
-    d = m.groupdict()
-    d2 = {}
-    d2['time_utc'] = b'%s-%s-%sT%s:%s:%s' % (
-        d['year'],
-        d['month'],
-        d['day'],
-        d['hour'],
-        d['minute'],
-        d['second']
-    )
-    return d2
-
-def line0x(s):
-    m = re_line0x.match(s)
-    if m is None: raise ValueError('Invalid syntax for time format')
-    d = m.groupdict()
-    d2 = {}
-    time = dt.datetime(1970,1,1) + dt.timedelta(seconds=float(d['unix_time']))
-    d2['time_utc'] = time.strftime(u'%Y-%m-%dT%H:%M:%S').encode('ascii')
+def line_time(s):
+    m1 = re_line_time_1.match(s)
+    m2 = re_line_time_2.match(s)
+    if m1 is not None:
+        d = m1.groupdict()
+        d2 = {}
+        d2['time_utc'] = b'%s-%s-%sT%s:%s:%s' % (
+            d['year'],
+            d['month'],
+            d['day'],
+            d['hour'],
+            d['minute'],
+            d['second']
+        )
+    elif m2 is not None:
+        d = m2.groupdict()
+        d2 = {}
+        time = dt.datetime(1970, 1, 1) + \
+            dt.timedelta(seconds=float(d['unix_time']))
+        d2['time_utc'] = time.strftime(u'%Y-%m-%dT%H:%M:%S').encode('ascii')
+    else:
+        raise ValueError('Invalid syntax for time format')
     return d2
 
 def line1(s):
@@ -210,19 +209,6 @@ def line6(s):
     read_hex(d, d2, 'checksum')
     return d2
 
-def line6x(s):
-    m = re_line6x.match(s)
-    if m is None:
-        raise ValueError('Invalid syntax for "line 6" format')
-    d = m.groupdict()
-    d2 = {}
-    read_int(d, d2, 'time_utc')
-    d2['time_utc'] = (
-        dt.datetime(1970, 1, 1) +
-        dt.timedelta(0, d2['time_utc'])
-    ).strftime(b'%Y-%m-%dT%H:%M:%S')
-    return d2
-
 def check(d):
     if 'checksum' in d and crc16(d['message']) != d['checksum']:
         raise ValueError('Invalid checksum')
@@ -304,6 +290,11 @@ def read_input(filename, options={}):
         stage = 0
         line_number = 0
 
+        def finalize(d):
+            if options['check']: check(d)
+            postprocess(d)
+            dd.append(d)
+
         for line in f.readlines():
             line_number += 1
             linex = line.rstrip()
@@ -311,18 +302,20 @@ def read_input(filename, options={}):
             if linex == b'':
                 continue
 
-            if linex.startswith(b'-') and not re_line0.match(linex):
+            if linex.startswith(b'-') and not re_line_time_1.match(linex):
                 continue
 
             while True:
                 try:
                     if stage == 0:
                         d = {}
-                        if re_line0.match(linex):
-                            d.update(line0(linex))
-                        elif re_line0x.match(linex):
-                            d.update(line0x(linex))
-                        stage = 1
+                        if re_line_time_1.match(linex) or \
+                            re_line_time_2.match(linex):
+                            d.update(line_time(linex))
+                            stage = 1
+                        else:
+                            stage = 1
+                            continue
                     elif stage == 1:
                         d.update(line1(linex))
                         d['message'] = line[1:]
@@ -347,24 +340,31 @@ def read_input(filename, options={}):
                         d['message'] += line
                         stage = 6
                     elif stage == 6:
-                        try:
+                        if re_line6.match(linex):
                             d.update(line6(linex))
                             d['message'] += line[0:1]
-                        except:
-                            d.update(line6x(linex))
-                        if options['check']: check(d)
-                        postprocess(d)
-                        dd.append(d)
-                        stage = 0
+                            stage = 7
+                        else:
+                            stage = 7
+                            continue
+                    elif stage == 7:
+                        if 'time_utc' not in d:
+                            d.update(line_time(linex))
+                            finalize(d)
+                            stage = 0
+                        else:
+                            finalize(d)
+                            stage = 0
+                            continue
                     else:
                         raise RuntimeError('Invalid decoding stage')
                 except Exception as e:
                     t, v, tb = sys.exc_info()
-                    log.error('Error on line %d: %s' % (
+                    log.warning('Error on line %d: %s' % (
                         line_number, e
                     ))
                     log.debug(traceback.format_exc())
-                    return []
+                    stage = 0
                 break
         return dd
 
@@ -583,7 +583,7 @@ def main():
 
     if args.debug:
         log.setLevel('DEBUG')
-    
+
     input_ = fsencode(args.input)
     output = fsencode(args.output)
 

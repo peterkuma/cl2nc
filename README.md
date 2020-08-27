@@ -413,6 +413,11 @@ functions to read the file (you may need to change the file extension to `.h5`).
 
 cl2nc follows [semantic versioning](http://semver.org/).
 
+### 3.3.0 (2020-08-27)
+
+- Fixed handling of certain types of time encoding.
+- Issue a warning instead of an error when a line cannot be parsed.
+
 ### 3.2.2 (2020-07-17)
 
 - Fixed installation on Windows.
