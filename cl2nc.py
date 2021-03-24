@@ -343,19 +343,22 @@ def read_input(filename, options={}):
                         if re_line6.match(linex):
                             d.update(line6(linex))
                             d['message'] += line[0:1]
-                            stage = 7
+                            if 'time_utc' in d:
+                                finalize(d)
+                                stage = 0
+                            else:
+                                stage = 7
                         else:
-                            stage = 7
+                            if 'time_utc' in d:
+                                finalize(d)
+                                stage = 0
+                            else:
+                                stage = 7
                             continue
                     elif stage == 7:
-                        if 'time_utc' not in d:
-                            d.update(line_time(linex))
-                            finalize(d)
-                            stage = 0
-                        else:
-                            finalize(d)
-                            stage = 0
-                            continue
+                        d.update(line_time(linex))
+                        finalize(d)
+                        stage = 0
                     else:
                         raise RuntimeError('Invalid decoding stage')
                 except Exception as e:
