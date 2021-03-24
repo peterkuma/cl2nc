@@ -413,6 +413,10 @@ functions to read the file (you may need to change the file extension to `.h5`).
 
 cl2nc follows [semantic versioning](http://semver.org/).
 
+### 3.3.1 (2021-03-24)
+
+- Fixed an issue of the last record in DAT files skipped.
+
 ### 3.3.0 (2020-08-27)
 
 - Fixed handling of certain types of time encoding.
