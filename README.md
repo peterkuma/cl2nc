@@ -413,6 +413,10 @@ functions to read the file (you may need to change the file extension to `.h5`).
 
 cl2nc follows [semantic versioning](http://semver.org/).
 
+### 3.3.2 (2023-02-26)
+
+- Issue a warning when no output was created because an input file is empty.
+
 ### 3.3.1 (2021-03-24)
 
 - Fixed an issue of the last record in DAT files skipped.
