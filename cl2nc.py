@@ -605,6 +605,8 @@ def main():
                 dd = read_input(input_filename, {'check': args.check})
                 if len(dd) > 0:
                     write_output(dd, output_filename)
+                else:
+                    log.warning('No output was created because the input file has no records')
             except Exception as e:
                 log.error(e)
                 log.debug(traceback.format_exc())
@@ -613,6 +615,8 @@ def main():
             dd = read_input(input_, {'check': args.check})
             if len(dd) > 0:
                 write_output(dd, output)
+            else:
+                log.warning('No output was created because the input file has no records')
         except Exception as e:
             log.error(e)
             log.debug(traceback.format_exc())
