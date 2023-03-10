@@ -420,6 +420,10 @@ functions to read the file (you may need to change the file extension to `.h5`).
 
 cl2nc follows [semantic versioning](http://semver.org/).
 
+### 3.4.0 (2023-03-10)
+
+- Added support for a CL51 format as in R/V Polarstern data.
+
 ### 3.3.2 (2023-02-26)
 
 - Issue a warning when no output was created because an input file is empty.

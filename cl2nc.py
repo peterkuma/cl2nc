@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-__version__ = '3.3.2'
+__version__ = '3.4.0'
 
 import sys
 import signal
