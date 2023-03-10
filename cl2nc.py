@@ -29,9 +29,11 @@ NA_NETCDF = {
     'f8': NA_FLOAT64,
 }
 
+re_file_time = re.compile(b'^.*\.(?P<year>\d{2})(?P<month>\d\d)(?P<day>\d\d)\.dat$')
 re_line_time_1 = re.compile(b'^-?(?P<year>\d{4})-(?P<month>\d\d)-(?P<day>\d\d) (?P<hour>\d\d):(?P<minute>\d\d):(?P<second>\d\d)$')
 re_line_time_2 = re.compile(b'^(?P<unix_time>\d*\.?\d*)$')
-re_line1 = re.compile(b'^\x01CL(?P<unit>.)(?P<software_level>\d\d\d)(?P<message_number>\d)(?P<message_subclass>\d)\x02?$')
+re_line_time_3 = re.compile(b'^= (?P<hour>\d\d):(?P<minute>\d\d):(?P<second>\d\d)$')
+re_line1 = re.compile(b'^\x01?CL(?P<unit>.)(?P<software_level>\d\d\d)(?P<message_number>\d)(?P<message_subclass>\d)\x02?$')
 re_line2 = re.compile(b'^(?P<detection_status>.)(?P<self_check>.) (?P<cbh_or_vertical_visibility>.{5}) (?P<cbh2_or_highest_signal>.{5}) (?P<cbh_3>.{5}) (?P<status_alarm>.{4})(?P<status_warning>.{4})(?P<status_internal>.{4})$')
 re_line3 = re.compile(b'^ (?P<sky_detection_status>..) +(?P<layer1_height>.{4}) +(?P<layer2_cloud_amount>.) +(?P<layer2_height>.{4}) +(?P<layer3_cloud_amount>.) +(?P<layer3_height>.{4}) +(?P<layer4_cloud_amount>.) +(?P<layer4_height>.{4}) +(?P<layer5_cloud_amount>.) +(?P<layer5_height>.{3,4})$')
 re_line4 = re.compile(b'^(?P<scale>.{5}) (?P<vertical_resolution>..) (?P<nsamples>.{4}) (?P<pulse_energy>...) (?P<laser_temperature>...) (?P<window_transmission>...) (?P<tilt_angle>..) (?P<background_light>.{4}) (?P<pulse_length>.)(?P<pulse_count>.{4})(?P<receiver_gain>.)(?P<receiver_bandwidth>.)(?P<sampling>..) (?P<backscatter_sum>...)$')
@@ -69,9 +71,11 @@ def read_hex_array(d, d2, var, k):
         z = int(y, 16)
         d2[var][int(i/k)] = z if z < (1<<(k*4 - 1)) else z - (1<<(k*4))
 
-def line_time(s):
+def line_time(s, filename=None):
     m1 = re_line_time_1.match(s)
     m2 = re_line_time_2.match(s)
+    m3 = re_line_time_3.match(s)
+    mf = re_file_time.match(filename)
     if m1 is not None:
         d = m1.groupdict()
         d2 = {}
@@ -89,6 +93,18 @@ def line_time(s):
         time = dt.datetime(1970, 1, 1) + \
             dt.timedelta(seconds=float(d['unix_time']))
         d2['time_utc'] = time.strftime(u'%Y-%m-%dT%H:%M:%S').encode('ascii')
+    elif m3 is not None and mf is not None:
+        d = m3.groupdict()
+        df = mf.groupdict()
+        d2 = {}
+        d2['time_utc'] = b'20%s-%s-%sT%s:%s:%s' % (
+            df['year'],
+            df['month'],
+            df['day'],
+            d['hour'],
+            d['minute'],
+            d['second']
+        )
     else:
         raise ValueError('Invalid syntax for time format')
     return d2
@@ -305,13 +321,17 @@ def read_input(filename, options={}):
             if linex.startswith(b'-') and not re_line_time_1.match(linex):
                 continue
 
+            if linex.startswith(b'=') and not re_line_time_3.match(linex):
+                continue
+
             while True:
                 try:
                     if stage == 0:
                         d = {}
                         if re_line_time_1.match(linex) or \
-                            re_line_time_2.match(linex):
-                            d.update(line_time(linex))
+                            re_line_time_2.match(linex) or \
+                            re_line_time_3.match(linex):
+                            d.update(line_time(linex, filename))
                             stage = 1
                         else:
                             stage = 1
@@ -356,7 +376,7 @@ def read_input(filename, options={}):
                                 stage = 7
                             continue
                     elif stage == 7:
-                        d.update(line_time(linex))
+                        d.update(line_time(linex, filename))
                         finalize(d)
                         stage = 0
                     else:
