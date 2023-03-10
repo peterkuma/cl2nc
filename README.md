@@ -388,6 +388,13 @@ If you encouter any issues with cl2nc you can
 contact me at Peter Kuma <<peter@peterkuma.net>>,
 or submit a [GitHub Issue](https://github.com/peterkuma/cl2nc/issues).
 
+## Known issues
+
+There are many different undocumented variants of the CL31/CL51 format in use.
+cl2nc strives to support most of them, but if you encounter errors with your
+data files, it might be because it is yet another variant. In such a case,
+submit a [GitHub Issue](https://github.com/peterkuma/cl2nc/issues).
+
 ## FAQ
 
 ### cl2nc fails with an exception.
