@@ -486,5 +486,6 @@ cl2nc follows [semantic versioning](http://semver.org/).
 
 [ALCF](https://alcf-lidar.github.io),
 [ccplot](https://ccplot.org),
+[ccbrowse](https://github.com/peterkuma/ccbrowse),
 [mpl2nc](https://github.com/peterkuma/mpl2nc),
 [mrr2c](https://github.com/peterkuma/mrr2c)
