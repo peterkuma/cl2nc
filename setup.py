@@ -14,7 +14,10 @@ setup(
         'console_scripts': ['cl2nc=cl2nc:main'],
     },
     data_files=[('share/man/man1', ['cl2nc.1'])],
-    install_requires=['netCDF4>=1.2.9'],
+    install_requires=[
+        'numpy',
+        'netCDF4>=1.2.9'
+    ],
     keywords=['vaisala', 'ceilometer', 'cl51', 'cl31', 'netcdf', 'lidar'],
     url='https://github.com/peterkuma/cl2nc',
     classifiers=[
