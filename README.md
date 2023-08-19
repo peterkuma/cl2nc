@@ -26,53 +26,29 @@ Supported operating systems:
 
 Requirements:
 
-- Python 2.7 or Python 3
+- Python 3 (Linux) or [Anaconda](https://www.anaconda.com/download/) (Windows and macOS)
+- pipx (Linux)
 
-On Windows and macOS [Anaconda](https://www.anaconda.com/download/)
-distribution of Python is recommended. On Linux, use Python
-which comes with your Linux distribution (either built-in, or installed through
-a package manager).
+The following commands should be run in the **Terminal** on Linux and macOS,
+or **Anaconda Prompt** on Windows (you can find Anaconda Prompt in the Start
+menu).
 
-The following commands should be run in the **Terminal** (Linux and macOS)
-or **Anaconda Prompt** (Windows – you can find Anaconda Prompt in the
-Start menu). To install with Python 3 instead of Python 2, replace `pip` with
-`pip3` and `python` with `python3` in the commands below.
+With Python 3 and pipx on Linux:
 
-To install from the
-[Python Package Index (PyPI)](https://pypi.python.org/pypi/cl2nc):
+```
+pipx install cl2nc
+```
 
-```sh
+Make sure `~/.local/bin` is in the `PATH` environment variable.
+
+With Anaconda on Windows or macOS:
+
+```
 pip install cl2nc
 ```
 
-or to install in the user's home directory
-(make sure `~/.local/bin` is in the `PATH` environment variable):
-
-```sh
-pip install cl2nc --user
-```
-
-Alternatively, to install from source, download and unpack the latest
-[cl2nc](https://github.com/peterkuma/cl2nc/archive/master.zip) archive, or
-clone the repository from GitHub
-(`git clone https://github.com/peterkuma/cl2nc.git`). In the package
-directory, run the following commands:
-
-```sh
-pip install netCDF4
-python setup.py install
-
-# or to install in the user's home directory
-# (make sure `~/.local/bin` is in the `PATH` environment variable):
-
-python setup.py install --user
-```
-
-You can also use the Python script `cl2nc` directly without installation
-(as long as netCDF4 is installed).
-
-Once installed, you should be able to run `cl2nc` in the Terminal
-(Linux and macOS) or Anaconda Prompt (Windows).
+Once installed, you should be able to run `cl2nc` in the Terminal (Linux and
+macOS) or Anaconda Prompt (Windows).
 
 ## Usage
 
