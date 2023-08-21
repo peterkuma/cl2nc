@@ -37,6 +37,8 @@ With Python 3 and pipx on Linux:
 
 ```
 pipx install cl2nc
+mkdir -p ~/.local/share/man/man1
+ln -s ~/.local/pipx/venvs/cl2nc/share/man/man1/cl2nc.1 ~/.local/share/man/man1/
 ```
 
 Make sure `~/.local/bin` is in the `PATH` environment variable.
