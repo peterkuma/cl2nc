@@ -89,7 +89,7 @@ Command Prompt (Windows).
 Synopsis:
 
 `cl2nc` [`-chq`] [`--debug`] *input* *output* \
-`cl2nc` `--help`
+`cl2nc` `-h`|`--help`
 
 *input* is an input `.dat` file. *output* is an output `.nc` file.  If
 directories are supplied for *input* and *output*, all `.dat` and `.DAT` files
