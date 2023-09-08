@@ -18,39 +18,68 @@ See [example.zip](example.zip) for an example input and output.
 
 ## Installation
 
-Supported operating systems:
+It is recommended to run cl2nc on Linux.
 
-- Linux
-- Windows
-- macOS
+### Linux
 
-Requirements:
+On Debian-derived distributions (Ubuntu, Devuan, ...), install the required
+system packages with:
 
-- Python 3 (Linux) or [Anaconda](https://www.anaconda.com/download/) (Windows and macOS)
-- pipx (Linux)
-
-The following commands should be run in the **Terminal** on Linux and macOS,
-or **Anaconda Prompt** on Windows (you can find Anaconda Prompt in the Start
-menu).
-
-With Python 3 and pipx on Linux:
-
+```sh
+sudo apt install python3 python3-pip pipx
 ```
+
+On Fedora, install the required system packages with:
+
+```sh
+sudo yum install python3 pipx
+```
+
+Install cl2nc:
+
+```sh
 pipx install cl2nc
 mkdir -p ~/.local/share/man/man1
 ln -s ~/.local/pipx/venvs/cl2nc/share/man/man1/cl2nc.1 ~/.local/share/man/man1/
 ```
 
-Make sure `~/.local/bin` is in the `PATH` environment variable.
+Make sure that `$HOME/.local/bin` is included in the `PATH` environment
+variable if not already. This can be done with `pipx ensurepath`.
 
-With Anaconda on Windows or macOS:
+You should now be able to run `cl2nc` and see the manual page with `man cl2nc`.
+
+### macOS
+
+Open the Terminal. Install cl2nc with:
+
+```sh
+python3 -m pip install cl2nc
+```
+
+Make sure that `/Users/<user>/Library/Python/<version>/bin` is included in the
+`PATH` environment variable if not already, where `<user>` is your system
+user name and `<version>` is the Python version. This path should be printed
+by the above command. This can be done by adding this line to the file
+`.zprofile` in your home directory and restart the Terminal:
 
 ```
+PATH="$PATH:/Users/<user>/Library/Python/<version>/bin"
+```
+
+You should now be able to run `cl2nc` and see the manual page with `man cl2nc`.
+
+### Windows
+
+Install [Python 3](https://www.python.org). In the installer, tick `Add
+python.exe to PATH`.
+
+Open Command Prompt from the Start menu. Install cl2nc with:
+
+```sh
 pip install cl2nc
 ```
 
-Once installed, you should be able to run `cl2nc` in the Terminal (Linux and
-macOS) or Anaconda Prompt (Windows).
+You should now be able to run `cl2nc`.
 
 ## Usage
 
