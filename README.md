@@ -1,7 +1,7 @@
 # cl2nc
 
 cl2nc is an open source command line Python program for converting Vaisala
-CL51 and CL31 ceilometer dat files to NetCDF.
+CL51 and CL31 ceilometer DAT and HIS L2 files to NetCDF.
 
 ## Example
 
@@ -11,7 +11,7 @@ On the command-line:
 cl2nc input.dat output.nc
 ```
 
-where `input.dat` is a Vaisala CL51 or CL31 dat file and `output.nc` is the name
+where `input.dat` is a Vaisala CL51 or CL31 DAT file and `output.nc` is the name
 of a NetCDF output file.
 
 See [example.zip](example.zip) for an example input and output.
@@ -110,13 +110,13 @@ Synopsis:
 `cl2nc` [`-chq`] [`--debug`] *input* *output* \
 `cl2nc` `-h`|`--help`
 
-*input* is an input `.dat` file. *output* is an output `.nc` file.  If
-directories are supplied for *input* and *output*, all `.dat` and `.DAT` files
-in *input* are converted to `.nc` files in *output*.
+*input* is an input `.dat` or `.his` (L2) file. *output* is an output `.nc` file.
+If directories are supplied for *input* and *output*, all `.dat`, `.DAT`, `.his`
+and `.HIS` files in *input* are converted to `.nc` files in *output*.
 
 Options:
 
-- `-c`: Enable checksum verification (slow).
+- `-c`: Enable DAT checksum verification (slow).
 - `--debug`: Enable debugging output.
 - `-h`, `--help`: Show help message and exit.
 - `-q`: Run quietly (suppress output).
@@ -135,11 +135,13 @@ variables.
 The DAT files can alternatively contain values in feet
 (instead of meters), in which case all values are converted by cl2nc to meters.
 
-Time in DAT files is assumed to be UTC.
+Time in DAT and HIS files is assumed to be UTC.
 
 Missing values are encoded as NaN (floating-point variables) or -2147483648
 (integer variables). The `_FillValue` attribute contains the missing value
 used in the given variable.
+
+DAT files produce the following NetCDF output:
 
 | Variable | Description | Units | Dimensions |
 | --- | --- | --- | --- |
@@ -177,6 +179,17 @@ used in the given variable.
 | [vertical_visibility](#vertical_visibility) | Vertical visibility | m | time |
 | [window_transmission](#window_transmission) | Window transmission estimate | % | time |
 
+HIS L2 files produce the following NetCDF output:
+
+| Variable | Description | Units | Dimensions |
+| --- | --- | --- | --- |
+| [backscatter](#backscatter) | Attenuated volume backscatter coefficient | km<sup>-1</sup>.sr<sup>-1</sup> | time, level |
+| [ceilometer](#ceilometer) | Ceilometer name | | time |
+| [level](#level) | Level number | | level |
+| [period](#period) | Period | | time |
+| [time](#time) | Time | seconds since 1970-01-01 00:00:00 UTC | time |
+| [time_utc](#time_utc) | Time (UTC) | ISO 8601 | time |
+
 ### background_light
 
 Background light (mV)
@@ -204,6 +217,10 @@ Second lowest cloud base height (m)
 ### cbh_3
 
 Highest cloud base height (m)
+
+### ceilometer
+
+Ceilometer name (HIS L2 variable `CEILOMETER`).
 
 ### detection_status
 
@@ -267,6 +284,10 @@ Message subclass
 
 - 6 – 10 m ⨉ 1540 samples, range 15400 m (msg1_10x1540)
 - 8 – without a backscatter profile (msg1_base)
+
+### period
+
+Period (HIS L2 variable `PERIOD`).
 
 ### pulse_energy
 
@@ -448,6 +469,10 @@ functions to read the file (you may need to change the file extension to `.h5`).
 ## Changelog
 
 cl2nc follows [semantic versioning](http://semver.org/).
+
+### 3.5.0 (2024-04-18)
+
+- Added support for the HIS L2 format.
 
 ### 3.4.0 (2023-03-10)
 

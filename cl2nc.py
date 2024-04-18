@@ -1,6 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-__version__ = '3.4.0'
+__version__ = '3.5.0'
 
 import sys
 import signal
@@ -40,6 +40,8 @@ re_line4 = re.compile(b'^(?P<scale>.{5}) (?P<vertical_resolution>..) (?P<nsample
 re_line5 = re.compile(b'^(?P<backscatter>.*)$')
 re_line6 = re.compile(b'^\x03(?P<checksum>.{4})\x04$')
 re_none = re.compile(b'^/* *$')
+
+re_his_time = re.compile(b'^(?P<year>\d{4})-(?P<month>\d\d)-(?P<day>\d\d) (?P<hour>\d\d):(?P<minute>\d\d):(?P<second>\d\d)$')
 
 def fsencode(x):
     return os.fsencode(x) if sys.version_info[0] > 2 else x
@@ -235,13 +237,19 @@ def postprocess(d):
         'scale',
         'backscatter_sum',
     ]:
-        d[var] = int_to_float(d[var])
+        if var in d: d[var] = int_to_float(d[var])
 
-    d['backscatter'] = d['backscatter']/100000.0*(d['scale']/100.0)
-    d['backscatter_sum'] = d['backscatter_sum']/10000.0*(d['scale']/100.0)
+    d['scale'] = d.get('scale', 10)
 
-    d['units'] = 'm' if (d['status_internal'] & 0x0080) else 'ft'
-    layer_height_factor = 100 if d['units'] == 'ft' else 10
+    if 'backscatter' in d:
+        d['backscatter'] = d['backscatter']/100000.0*(d['scale']/100.0)
+
+    if 'backscatter_sum' in d:
+        d['backscatter_sum'] = d['backscatter_sum']/10000.0*(d['scale']/100.0)
+
+    if 'status_internal' in d:
+        d['units'] = 'm' if (d['status_internal'] & 0x0080) else 'ft'
+        layer_height_factor = 100 if d['units'] == 'ft' else 10
 
     if 'layer1_height' in d:
         d['layer_height'] = NA_INT32*np.ones(5)
@@ -258,7 +266,7 @@ def postprocess(d):
         for i in range(5):
             d['layer_cloud_amount'][i] = d['layer%d_cloud_amount' % (i + 1)]
 
-    if d['units'] == 'ft':
+    if 'units' in d and d['units'] == 'ft':
         for var in [
             'vertical_visibility',
             'layer_height',
@@ -273,17 +281,19 @@ def postprocess(d):
                     NA_INT32
                 )
 
-    d['pulse_count'] = np.where(
-        d['pulse_count'] != NA_INT32,
-        d['pulse_count']*1024,
-        NA_INT32
-    )
+    if 'pulse_count' in d:
+        d['pulse_count'] = np.where(
+            d['pulse_count'] != NA_INT32,
+            d['pulse_count']*1024,
+            NA_INT32
+        )
 
     d['time_utc'] = d.get('time_utc', '')
-    d['time'] = NA_INT64 if d['time_utc'] == '' else (
-        dt.datetime.strptime(d['time_utc'].decode('ascii'), '%Y-%m-%dT%H:%M:%S')
-        - dt.datetime(1970, 1, 1)
-    ).total_seconds()
+    if 'time_utc' in d:
+        d['time'] = NA_INT64 if d['time_utc'] == '' else (
+            dt.datetime.strptime(d['time_utc'].decode('ascii'), '%Y-%m-%dT%H:%M:%S')
+            - dt.datetime(1970, 1, 1)
+        ).total_seconds()
 
 def crc16(buf):
     crc = 0xffff
@@ -295,7 +305,7 @@ def crc16(buf):
             crc = (crc^xmask) & 0xffff
     return crc^0xffff;
 
-def read_input(filename, options={}):
+def read_dat(filename, options={}):
     options = dict({
         'check': False,
     }, **options)
@@ -391,10 +401,79 @@ def read_input(filename, options={}):
                 break
         return dd
 
+def read_his_time(s):
+    m = re_his_time.match(s)
+    if m is not None:
+        g = m.groupdict()
+        return b'%s-%s-%sT%s:%s:%s' % (
+            g['year'],
+            g['month'],
+            g['day'],
+            g['hour'],
+            g['minute'],
+            g['second']
+        )
+    else:
+        raise ValueError('Invalid syntax for CREATEDATE field')
+
+def read_his_period(s):
+    try:
+        return int(s)
+    except ValueError:
+        raise ValueError('Invalid syntax for PERIOD field')
+
+def read_his_backscatter(s):
+    d2 = {}
+    d = {'backscatter': s}
+    read_hex_array(d, d2, 'backscatter', 5)
+    return d2['backscatter']
+
+def read_his(filename, options={}):
+    with open(filename, 'rb') as f:
+        dd = []
+        line_number = 0
+        header = None
+        for line in f.readlines():
+            line_number += 1
+            try:
+                d = {}
+                items = line.split(b',')
+                items = [x.strip() for x in items]
+                if items[0] == b'History file':
+                    continue
+                if header is None:
+                    header = items
+                    continue
+                for i, h in enumerate(header):
+                    s = items[i] if i < len(items) else b''
+                    if h == b'CREATEDATE':
+                        d['time_utc'] = read_his_time(s)
+                    elif h == b'CEILOMETER':
+                        d['ceilometer'] = s
+                    elif h == b'PERIOD':
+                        d['period'] = read_his_period(s)
+                    elif h == b'BS_PROFILE':
+                        d['backscatter'] = read_his_backscatter(s)
+                postprocess(d)
+                dd += [d]
+            except Exception as e:
+                t, v, tb = sys.exc_info()
+                log.warning('Error on line %d: %s' % (
+                    line_number, e
+                ))
+                log.debug(traceback.format_exc())
+    return dd
+
+def read(filename, options={}):
+    filename_lower = filename.lower()
+    if filename_lower.endswith(b'.his'):
+        return read_his(filename, options)
+    else:
+        return read_dat(filename, options)
+
 def write_output(dd, filename):
     n = len(dd)
     vars = list(set(itertools.chain(*[list(d.keys()) for d in dd])))
-    m = np.max([0] + [len(d['backscatter']) for d in dd])
 
     if os.path.dirname(filename) != b'' and \
         not os.path.exists(os.path.dirname(filename)):
@@ -402,14 +481,23 @@ def write_output(dd, filename):
 
     f = Dataset(fsdecode(filename), 'w', format='NETCDF4')
     f.createDimension('time', n)
-    f.createDimension('level', m)
-    f.createDimension('layer', 5)
-    level = np.arange(m)
-    layer = np.arange(5)
+
+    if 'backscatter' in vars:
+        m = np.max([0] + [len(d['backscatter']) for d in dd])
+        f.createDimension('level', m)
+        level = np.arange(m)
+
+    has_layers = 'layer_height' in vars or 'layer_cloud_amount' in vars
+    if has_layers:
+        f.createDimension('layer', 5)
+        layer = np.arange(5)
 
     def write_var(var, dtype, attributes={}):
         if not var in vars: return
         fill_value = NA_NETCDF.get(dtype)
+        if dtype == 'SX':
+            slen = max([len(d[var]) for d in dd])
+            dtype = 'S%d' % slen
         v = f.createVariable(var, dtype, ('time',), fill_value=fill_value)
         v[:] = np.array([d[var] for d in dd])
         v.setncatts(attributes)
@@ -445,12 +533,14 @@ def write_output(dd, filename):
         'long_name': 'Time',
         'units': 'seconds since 1970-01-01 00:00:00 UTC',
     })
-    write_dim('level', 'i4', level, {
-        'long_name': 'Level number',
-    })
-    write_dim('layer', 'i4', layer, {
-        'long_name': 'Layer number',
-    })
+    if 'backscatter' in vars:
+        write_dim('level', 'i4', level, {
+            'long_name': 'Level number',
+        })
+    if has_layers:
+        write_dim('layer', 'i4', layer, {
+            'long_name': 'Layer number',
+        })
     write_profile('backscatter', 'f4', {
         'long_name': 'Attenuated volume backscatter coefficient',
         'units': 'km^-1.sr^-1',
@@ -566,6 +656,12 @@ def write_output(dd, filename):
         'units': 'sr^-1',
         'comment': 'Sum of detected and normalized backscatter',
     })
+    write_var('ceilometer', 'SX', {
+        'long_name': 'Ceilometer name',
+    })
+    write_var('period', 'i4', {
+        'long_name': 'Period',
+    })
     write_layer('layer_height', 'i4', {
         'long_name': 'Layer height',
         'units': 'm',
@@ -584,11 +680,11 @@ def write_output(dd, filename):
     f.close()
 
 def main():
-    parser = argparse.ArgumentParser(description='Convert Vaisala CL51 and CL31 dat files to NetCDF')
+    parser = argparse.ArgumentParser(description='Convert Vaisala CL51 and CL31 DAT and HIS L2 files to NetCDF')
     parser.add_argument('-c',
         dest='check',
         action='store_true',
-        help='enable checksum verification (slow)'
+        help='enable DAT checksum verification (slow)'
     )
     parser.add_argument('-q',
         dest='quiet',
@@ -612,7 +708,8 @@ def main():
 
     if os.path.isdir(input_):
         for file_ in sorted([fsencode(x) for x in os.listdir(input_)]):
-            if not (file_.endswith(b'.dat') or file_.endswith(b'.DAT')):
+            file_lower = file_.lower()
+            if not (file_lower.endswith(b'.dat') or file_lower.endswith(b'.his')):
                 continue
             input_filename = os.path.join(input_, file_)
             output_filename = os.path.join(
@@ -622,7 +719,7 @@ def main():
             if not args.quiet:
                 print(fsdecode(input_filename))
             try:
-                dd = read_input(input_filename, {'check': args.check})
+                dd = read(input_filename, {'check': args.check})
                 if len(dd) > 0:
                     write_output(dd, output_filename)
                 else:
@@ -632,7 +729,7 @@ def main():
                 log.debug(traceback.format_exc())
     else:
         try:
-            dd = read_input(input_, {'check': args.check})
+            dd = read(input_, {'check': args.check})
             if len(dd) > 0:
                 write_output(dd, output)
             else:
