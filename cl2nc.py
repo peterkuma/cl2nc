@@ -19,26 +19,29 @@ from netCDF4 import Dataset
 
 NA_INT32 = -1<<31
 NA_INT64 = -1<<63
-NA_FLOAT32 = np.nan
-NA_FLOAT64 = np.nan
 
 NA_NETCDF = {
     'i4': NA_INT32,
     'i8': NA_INT64,
-    'f4': NA_FLOAT32,
-    'f8': NA_FLOAT64,
+    'f4': np.nan,
+    'f8': np.nan,
 }
 
 re_file_time = re.compile(b'^.*\.(?P<year>\d{2})(?P<month>\d\d)(?P<day>\d\d)\.dat$')
 re_line_time_1 = re.compile(b'^-?(?P<year>\d{4})-(?P<month>\d\d)-(?P<day>\d\d) (?P<hour>\d\d):(?P<minute>\d\d):(?P<second>\d\d)$')
 re_line_time_2 = re.compile(b'^(?P<unix_time>\d*\.?\d*)$')
 re_line_time_3 = re.compile(b'^= (?P<hour>\d\d):(?P<minute>\d\d):(?P<second>\d\d)$')
-re_line1 = re.compile(b'^\x01?CL(?P<unit>.)(?P<software_level>\d\d\d)(?P<message_number>\d)(?P<message_subclass>\d)\x02?$')
+re_line1 = re.compile(b'^\x01?(?P<id>CL)(?P<unit>.)(?P<software_level>\d\d\d)(?P<message_number>\d)(?P<message_subclass>\d)\x02?$')
+re_line1ct = re.compile(b'^\x01?(?P<id>CT)(?P<unit>.)(?P<software_level>\d\d)(?P<message_number>\d)(?P<message_subclass>\d)\x02?$')
 re_line2 = re.compile(b'^(?P<detection_status>.)(?P<self_check>.) (?P<cbh_or_vertical_visibility>.{5}) (?P<cbh2_or_highest_signal>.{5}) (?P<cbh_3>.{5}) (?P<status_alarm>.{4})(?P<status_warning>.{4})(?P<status_internal>.{4})$')
+re_line2ct = re.compile(b'^(?P<detection_status>.)(?P<self_check>.) (?P<cbh_or_vertical_visibility>.{5}) (?P<cbh2_or_highest_signal>.{5}) (?P<cbh_3>.{5}) (?P<status_alarm>.{2})(?P<status_warning>.{3})(?P<status_internal>.{3})$')
 re_line3 = re.compile(b'^ (?P<sky_detection_status>..) +(?P<layer1_height>.{4}) +(?P<layer2_cloud_amount>.) +(?P<layer2_height>.{4}) +(?P<layer3_cloud_amount>.) +(?P<layer3_height>.{4}) +(?P<layer4_cloud_amount>.) +(?P<layer4_height>.{4}) +(?P<layer5_cloud_amount>.) +(?P<layer5_height>.{3,4})$')
+re_line3ct = re.compile(b'^(?P<scale>.{3}) (?P<measurement_mode>.) (?P<pulse_energy>...) (?P<laser_temperature>...) (?P<receiver_sensitivity>...) (?P<window_contamination>....) (?P<tilt_angle>...) (?P<background_light>.{4}) (?P<pulse_length>.)F(?P<pulse_count>.)(?P<receiver_gain>.)(?P<receiver_bandwidth>.)(?P<sampling>.) (?P<backscatter_sum>...)$')
 re_line4 = re.compile(b'^(?P<scale>.{5}) (?P<vertical_resolution>..) (?P<nsamples>.{4}) (?P<pulse_energy>...) (?P<laser_temperature>...) (?P<window_transmission>...) (?P<tilt_angle>..) (?P<background_light>.{4}) (?P<pulse_length>.)(?P<pulse_count>.{4})(?P<receiver_gain>.)(?P<receiver_bandwidth>.)(?P<sampling>..) (?P<backscatter_sum>...)$')
+re_line4ct = re.compile(b'^(?P<start_distance>...)(?P<backscatter_segment>.*)$')
 re_line5 = re.compile(b'^(?P<backscatter>.*)$')
 re_line6 = re.compile(b'^\x03(?P<checksum>.{4})\x04$')
+re_line20ct = re.compile(b'^\x03$')
 re_none = re.compile(b'^/* *$')
 
 re_his_time = re.compile(b'^(?P<year>\d{4})-(?P<month>\d\d)-(?P<day>\d\d) (?P<hour>\d\d):(?P<minute>\d\d):(?P<second>\d\d)$')
@@ -55,183 +58,207 @@ def is_none(s):
 def int_to_float(x):
     return np.where(x != NA_INT32, x, np.nan)
 
-def read_int(d, d2, var):
-    d2[var] = int(d[var]) if not is_none(d[var]) else NA_INT32
+def read_int(d, g, var):
+    d[var] = int(g[var]) if not is_none(g[var]) else NA_INT32
 
-def read_str(d, d2, var):
-    d2[var] = d[var]
+def read_str(d, g, var):
+    d[var] = g[var]
 
-def read_hex(d, d2, var):
-    d2[var] = int(d[var], 16)
+def read_hex(d, g, var):
+    d[var] = int(g[var], 16)
 
-def read_hex_array(d, d2, var, k):
-    x = d[var]
+def read_hex_array(d, g, var, k):
+    x = g[var]
     n = len(x)
-    d2[var] = np.zeros(int(np.ceil(1.0*n/k)), dtype=int)
+    d[var] = np.zeros(int(np.ceil(1.0*n/k)), dtype=int)
     for i in range(0, n, k):
         y = x[i:min(i + k, n)]
         z = int(y, 16)
-        d2[var][int(i/k)] = z if z < (1<<(k*4 - 1)) else z - (1<<(k*4))
+        d[var][int(i/k)] = z if z < (1<<(k*4 - 1)) else z - (1<<(k*4))
 
-def line_time(s, filename=None):
+def line_time(d, s, filename=None):
     m1 = re_line_time_1.match(s)
     m2 = re_line_time_2.match(s)
     m3 = re_line_time_3.match(s)
     mf = re_file_time.match(filename)
     if m1 is not None:
-        d = m1.groupdict()
-        d2 = {}
-        d2['time_utc'] = b'%s-%s-%sT%s:%s:%s' % (
-            d['year'],
-            d['month'],
-            d['day'],
-            d['hour'],
-            d['minute'],
-            d['second']
+        g = m1.groupdict()
+        d['time_utc'] = b'%s-%s-%sT%s:%s:%s' % (
+            g['year'],
+            g['month'],
+            g['day'],
+            g['hour'],
+            g['minute'],
+            g['second']
         )
     elif m2 is not None:
-        d = m2.groupdict()
-        d2 = {}
+        g = m2.groupdict()
         time = dt.datetime(1970, 1, 1) + \
             dt.timedelta(seconds=float(d['unix_time']))
-        d2['time_utc'] = time.strftime(u'%Y-%m-%dT%H:%M:%S').encode('ascii')
+        d['time_utc'] = time.strftime(u'%Y-%m-%dT%H:%M:%S').encode('ascii')
     elif m3 is not None and mf is not None:
-        d = m3.groupdict()
-        df = mf.groupdict()
-        d2 = {}
-        d2['time_utc'] = b'20%s-%s-%sT%s:%s:%s' % (
-            df['year'],
-            df['month'],
-            df['day'],
-            d['hour'],
-            d['minute'],
-            d['second']
+        g = m3.groupdict()
+        gf = mf.groupdict()
+        d['time_utc'] = b'20%s-%s-%sT%s:%s:%s' % (
+            gf['year'],
+            gf['month'],
+            gf['day'],
+            g['hour'],
+            g['minute'],
+            g['second']
         )
     else:
         raise ValueError('Invalid syntax for time format')
-    return d2
 
-def line1(s):
+def line1(d, s):
     m = re_line1.match(s)
-    if m is None: raise ValueError('Invalid syntax for "line 1" format')
-    d = m.groupdict()
-    d2 = {}
-    read_str(d, d2, 'unit')
-    read_int(d, d2, 'software_level')
-    read_int(d, d2, 'message_number')
-    read_int(d, d2, 'message_subclass')
-    return d2
+    mct = re_line1ct.match(s)
+    if m is None and mct is None: raise ValueError('Invalid syntax for "line 1" format')
+    if m is None: m = mct
+    g = m.groupdict()
+    read_str(d, g, 'id')
+    read_str(d, g, 'unit')
+    read_int(d, g, 'software_level')
+    read_int(d, g, 'message_number')
+    read_int(d, g, 'message_subclass')
 
-def line2(s):
-    m = re_line2.match(s)
+def line2(d, s):
+    if d['id'] == b'CT':
+        m = re_line2ct.match(s)
+    else:
+        m = re_line2.match(s)
     if m is None: raise ValueError('Invalid syntax for "line 2" format')
-    d = m.groupdict()
-    d2 = {}
-    read_str(d, d2, 'detection_status')
-    read_str(d, d2, 'self_check')
-    read_int(d, d2, 'cbh_or_vertical_visibility')
-    read_int(d, d2, 'cbh2_or_highest_signal')
-    read_int(d, d2, 'cbh_3')
-    read_hex(d, d2, 'status_alarm')
-    read_hex(d, d2, 'status_warning')
-    read_hex(d, d2, 'status_internal')
+    g = m.groupdict()
+    read_str(d, g, 'detection_status')
+    read_str(d, g, 'self_check')
+    read_int(d, g, 'cbh_or_vertical_visibility')
+    read_int(d, g, 'cbh2_or_highest_signal')
+    read_int(d, g, 'cbh_3')
+    read_hex(d, g, 'status_alarm')
+    read_hex(d, g, 'status_warning')
+    read_hex(d, g, 'status_internal')
 
-    d2['vertical_visibility'] = \
-        d2['cbh_or_vertical_visibility'] \
-        if d2['detection_status'] == b'4' \
+    d['vertical_visibility'] = \
+        d['cbh_or_vertical_visibility'] \
+        if d['detection_status'] == b'4' \
         else NA_INT32
 
-    d2['cbh_1'] = \
-        d2['cbh_or_vertical_visibility'] \
-        if d2['detection_status'] in (b'1', b'2', b'3') \
+    d['cbh_1'] = \
+        d['cbh_or_vertical_visibility'] \
+        if d['detection_status'] in (b'1', b'2', b'3') \
         else NA_INT32
 
-    d2['cbh_2'] = \
-        d2['cbh2_or_highest_signal'] \
-        if d2['detection_status'] in (b'2', b'3') \
+    d['cbh_2'] = \
+        d['cbh2_or_highest_signal'] \
+        if d['detection_status'] in (b'2', b'3') \
         else NA_INT32
 
-    d2['highest_signal'] = \
-        d2['cbh2_or_highest_signal'] \
-        if d2['detection_status'] == b'4' \
+    d['highest_signal'] = \
+        d['cbh2_or_highest_signal'] \
+        if d['detection_status'] == b'4' \
         else NA_INT32
 
-    return d2
-
-def line3(s):
+def line3(d, s):
     m = re_line3.match(s)
     if m is None: raise ValueError('Invalid syntax for "line 3" format')
-    d = m.groupdict()
-    d2 = {}
-    read_int(d, d2, 'sky_detection_status')
-    read_int(d, d2, 'layer1_height')
-    read_int(d, d2, 'layer2_cloud_amount')
-    read_int(d, d2, 'layer2_height')
-    read_int(d, d2, 'layer3_cloud_amount')
-    read_int(d, d2, 'layer3_height')
-    read_int(d, d2, 'layer4_cloud_amount')
-    read_int(d, d2, 'layer4_height')
-    read_int(d, d2, 'layer5_cloud_amount')
-    read_int(d, d2, 'layer5_height')
+    g = m.groupdict()
+    read_int(d, g, 'sky_detection_status')
+    read_int(d, g, 'layer1_height')
+    read_int(d, g, 'layer2_cloud_amount')
+    read_int(d, g, 'layer2_height')
+    read_int(d, g, 'layer3_cloud_amount')
+    read_int(d, g, 'layer3_height')
+    read_int(d, g, 'layer4_cloud_amount')
+    read_int(d, g, 'layer4_height')
+    read_int(d, g, 'layer5_cloud_amount')
+    read_int(d, g, 'layer5_height')
 
-    d2['layer1_cloud_amount'] = \
-        d2['sky_detection_status'] \
-        if d2['sky_detection_status'] >= 0 and d2['sky_detection_status'] <= 8 \
+    d['layer1_cloud_amount'] = \
+        d['sky_detection_status'] \
+        if d['sky_detection_status'] >= 0 and d['sky_detection_status'] <= 8 \
         else NA_INT32
 
     if not (
-        d2['sky_detection_status'] >= 0 and
-        d2['sky_detection_status'] <= 8
+        d['sky_detection_status'] >= 0 and
+        d['sky_detection_status'] <= 8
     ):
-        d2['layer2_cloud_amount'] = NA_INT32
-        d2['layer3_cloud_amount'] = NA_INT32
-        d2['layer4_cloud_amount'] = NA_INT32
-        d2['layer5_cloud_amount'] = NA_INT32
+        d['layer2_cloud_amount'] = NA_INT32
+        d['layer3_cloud_amount'] = NA_INT32
+        d['layer4_cloud_amount'] = NA_INT32
+        d['layer5_cloud_amount'] = NA_INT32
 
-    return d2
+def line3ct(d, s):
+    return line4(d, s)
 
-def line4(s):
-    m = re_line4.match(s)
+def line4(d, s):
+    if d['id'] == b'CT':
+        m = re_line3ct.match(s)
+        if m is None: raise ValueError('Invalid syntax for "line 3" format')
+    else:
+        m = re_line4.match(s)
+        if m is None: raise ValueError('Invalid syntax for "line 4" format')
+    g = m.groupdict()
+    read_int(d, g, 'scale')
+    read_int(d, g, 'pulse_energy')
+    read_int(d, g, 'laser_temperature')
+    read_int(d, g, 'tilt_angle')
+    read_int(d, g, 'background_light')
+    read_str(d, g, 'pulse_length')
+    read_int(d, g, 'pulse_count')
+    read_str(d, g, 'receiver_gain')
+    read_str(d, g, 'receiver_bandwidth')
+    read_int(d, g, 'backscatter_sum')
+    read_int(d, g, 'sampling')
+    if d['id'] == b'CT':
+        read_str(d, g, 'measurement_mode')
+        read_int(d, g, 'receiver_sensitivity')
+        read_int(d, g, 'window_contamination')
+    else:
+        read_int(d, g, 'vertical_resolution')
+        read_int(d, g, 'nsamples')
+        read_int(d, g, 'window_transmission')
+
+def line4ct(d, s):
+    m = re_line4ct.match(s)
     if m is None: raise ValueError('Invalid syntax for "line 4" format')
-    d = m.groupdict()
-    d2 = {}
-    read_int(d, d2, 'scale')
-    read_int(d, d2, 'vertical_resolution')
-    read_int(d, d2, 'nsamples')
-    read_int(d, d2, 'pulse_energy')
-    read_int(d, d2, 'laser_temperature')
-    read_int(d, d2, 'window_transmission')
-    read_int(d, d2, 'tilt_angle')
-    read_int(d, d2, 'background_light')
-    read_str(d, d2, 'pulse_length')
-    read_int(d, d2, 'pulse_count')
-    read_str(d, d2, 'receiver_gain')
-    read_str(d, d2, 'receiver_bandwidth')
-    read_int(d, d2, 'backscatter_sum')
-    return d2
+    g = m.groupdict()
+    read_int(d, g, 'start_distance')
+    read_hex_array(d, g, 'backscatter_segment', 4)
+    i = d['start_distance']
+    j = i + len(d['backscatter_segment'])
+    if 'backscatter' not in d:
+        d['backscatter'] = np.full(256, np.nan, np.float64)
+    if i < 0 or j > len(d['backscatter']):
+        raise ValueError('Invalid backscatter start distance (%d ft)' %
+            (d['start_distance']*100))
+    d['backscatter'][i:j] = d['backscatter_segment']
+    del d['start_distance'], d['backscatter_segment']
 
-def line5(s):
+def line5(d, s):
     m = re_line5.match(s)
     if m is None: raise ValueError('Invalid syntax for "line 5" format')
-    d = m.groupdict()
-    d2 = {}
-    read_hex_array(d, d2, 'backscatter', 5)
-    return d2
+    g = m.groupdict()
+    read_hex_array(d, g, 'backscatter', 5)
 
-def line6(s):
+def line20ct(d, s):
+    m = re_line20ct.match(s)
+    if m is None:
+        raise ValueError('Invalid syntax for "line 20" format')
+
+def line6(d, s):
     m = re_line6.match(s)
     if m is None:
         raise ValueError('Invalid syntax for "line 6" format')
-    d = m.groupdict()
-    d2 = {}
-    read_hex(d, d2, 'checksum')
-    return d2
+    g = m.groupdict()
+    read_hex(d, g, 'checksum')
 
 def check(d):
     if 'checksum' in d and crc16(d['message']) != d['checksum']:
         raise ValueError('Invalid checksum')
 
 def postprocess(d):
+    id_ = d.get('id')
+
     for var in [
         'backscatter',
         'scale',
@@ -241,11 +268,13 @@ def postprocess(d):
 
     d['scale'] = d.get('scale', 10)
 
+    scale_factor = 10000 if id_ == b'CT' else 100000
+
     if 'backscatter' in d:
-        d['backscatter'] = d['backscatter']/100000.0*(d['scale']/100.0)
+        d['backscatter'] = d['backscatter']/scale_factor*(d['scale']/100)
 
     if 'backscatter_sum' in d:
-        d['backscatter_sum'] = d['backscatter_sum']/10000.0*(d['scale']/100.0)
+        d['backscatter_sum'] = d['backscatter_sum']/10000*(d['scale']/100)
 
     if 'status_internal' in d:
         d['units'] = 'm' if (d['status_internal'] & 0x0080) else 'ft'
@@ -284,9 +313,16 @@ def postprocess(d):
     if 'pulse_count' in d:
         d['pulse_count'] = np.where(
             d['pulse_count'] != NA_INT32,
-            d['pulse_count']*1024,
+            d['pulse_count']*1024 if id_ == b'CT' \
+                else 4**(d['pulse_count'] + 1),
             NA_INT32
         )
+
+    if 'sampling' in d:
+        if id_ == b'CT':
+            d['sampling'] *= 10e6
+        else:
+            d['sampling'] *= 1e6
 
     d['time_utc'] = d.get('time_utc', '')
     if 'time_utc' in d:
@@ -294,6 +330,9 @@ def postprocess(d):
             dt.datetime.strptime(d['time_utc'].decode('ascii'), '%Y-%m-%dT%H:%M:%S')
             - dt.datetime(1970, 1, 1)
         ).total_seconds()
+
+    if id_ == b'CT':
+        d['vertical_resolution'] = 30
 
 def crc16(buf):
     crc = 0xffff
@@ -319,6 +358,8 @@ def read_dat(filename, options={}):
         def finalize(d):
             if options['check']: check(d)
             postprocess(d)
+            if len(dd) > 0 and d['id'] != dd[0]['id']:
+                raise ValueError('Mixed ceilometer types in one input file are not supported')
             dd.append(d)
 
         for line in f.readlines():
@@ -341,37 +382,55 @@ def read_dat(filename, options={}):
                         if re_line_time_1.match(linex) or \
                             re_line_time_2.match(linex) or \
                             re_line_time_3.match(linex):
-                            d.update(line_time(linex, filename))
+                            line_time(d, linex, filename)
                             stage = 1
                         else:
                             stage = 1
                             continue
                     elif stage == 1:
-                        d.update(line1(linex))
+                        line1(d, linex)
                         d['message'] = line[1:]
                         stage = 2
                     elif stage == 2:
-                        d.update(line2(linex))
+                        line2(d, linex)
                         d['message'] += line
-                        if d['message_number'] == 2:
+                        if d['id'] == b'CT' or d['message_number'] == 2:
                             stage = 3
                         else:
                             stage = 4
                     elif stage == 3:
-                        d.update(line3(linex))
+                        if d['id'] == b'CT':
+                            line3ct(d, linex)
+                        else:
+                            line3(d, linex)
                         d['message'] += line
                         stage = 4
+                        substage = 1
                     elif stage == 4:
-                        d.update(line4(linex))
+                        if d['id'] == b'CT':
+                            line4ct(d, linex)
+                        else:
+                            line4(d, linex)
                         d['message'] += line
-                        stage = 5
+                        if d['id'] == b'CT' and substage < 16:
+                            stage = 4
+                            substage += 1
+                        else:
+                            stage = 5
                     elif stage == 5:
-                        d.update(line5(linex))
+                        if d['id'] == b'CT':
+                            line20ct(d, linex)
+                        else:
+                            line5(d, linex)
                         d['message'] += line
-                        stage = 6
+                        if d['id'] == b'CT':
+                            finalize(d)
+                            stage = 0
+                        else:
+                            stage = 6
                     elif stage == 6:
                         if re_line6.match(linex):
-                            d.update(line6(linex))
+                            line6(d, linex)
                             d['message'] += line[0:1]
                             if 'time_utc' in d:
                                 finalize(d)
@@ -386,7 +445,7 @@ def read_dat(filename, options={}):
                                 stage = 7
                             continue
                     elif stage == 7:
-                        d.update(line_time(linex, filename))
+                        line_time(d, linex)
                         finalize(d)
                         stage = 0
                     else:
@@ -401,11 +460,11 @@ def read_dat(filename, options={}):
                 break
         return dd
 
-def read_his_time(s):
+def read_his_time(d, s):
     m = re_his_time.match(s)
     if m is not None:
         g = m.groupdict()
-        return b'%s-%s-%sT%s:%s:%s' % (
+        d['time_utc'] = b'%s-%s-%sT%s:%s:%s' % (
             g['year'],
             g['month'],
             g['day'],
@@ -416,17 +475,14 @@ def read_his_time(s):
     else:
         raise ValueError('Invalid syntax for CREATEDATE field')
 
-def read_his_period(s):
+def read_his_period(d, s):
     try:
-        return int(s)
+        d['period'] = int(s)
     except ValueError:
         raise ValueError('Invalid syntax for PERIOD field')
 
-def read_his_backscatter(s):
-    d2 = {}
-    d = {'backscatter': s}
-    read_hex_array(d, d2, 'backscatter', 5)
-    return d2['backscatter']
+def read_his_backscatter(d, s):
+    read_hex_array(d, {'backscatter': s}, 'backscatter', 5)
 
 def read_his(filename, options={}):
     with open(filename, 'rb') as f:
@@ -447,13 +503,13 @@ def read_his(filename, options={}):
                 for i, h in enumerate(header):
                     s = items[i] if i < len(items) else b''
                     if h == b'CREATEDATE':
-                        d['time_utc'] = read_his_time(s)
+                        read_his_time(d, s)
                     elif h == b'CEILOMETER':
                         d['ceilometer'] = s
                     elif h == b'PERIOD':
-                        d['period'] = read_his_period(s)
+                        read_his_period(d, s)
                     elif h == b'BS_PROFILE':
-                        d['backscatter'] = read_his_backscatter(s)
+                        read_his_backscatter(d, s)
                 postprocess(d)
                 dd += [d]
             except Exception as e:
@@ -473,6 +529,7 @@ def read(filename, options={}):
 
 def write_output(dd, filename):
     n = len(dd)
+    id_ = dd[0].get('id')
     vars = list(set(itertools.chain(*[list(d.keys()) for d in dd])))
 
     if os.path.dirname(filename) != b'' and \
@@ -525,126 +582,173 @@ def write_output(dd, filename):
         v[:] = x
         v.setncatts(attributes)
 
+    write_var('id', 'S2', {
+        'long_name': 'ceilometer identification string',
+    })
     write_var('time_utc', 'S19', {
-        'long_name': 'Time (UTC)',
+        'long_name': 'time (UTC)',
+        'standard_name': 'time',
         'units': 'ISO 8601',
     })
     write_var('time', 'i8', {
         'long_name': 'Time',
+        'standard_name': 'time',
         'units': 'seconds since 1970-01-01 00:00:00 UTC',
     })
     if 'backscatter' in vars:
         write_dim('level', 'i4', level, {
-            'long_name': 'Level number',
+            'long_name': 'level number',
         })
     if has_layers:
         write_dim('layer', 'i4', layer, {
-            'long_name': 'Layer number',
+            'long_name': 'layer number',
         })
     write_profile('backscatter', 'f4', {
-        'long_name': 'Attenuated volume backscatter coefficient',
+        'long_name': 'attenuated volume backscattering coefficient',
         'units': 'km^-1.sr^-1',
     })
     write_var('unit', 'S1', {
-        'long_name': 'Unit identification character',
+        'long_name': 'unit identification character',
     })
     write_var('software_level', 'i4', {
-        'long_name': 'Software level',
+        'long_name': 'software level',
     })
     write_var('message_number', 'i4', {
-        'long_name': 'Message number',
+        'long_name': 'message number',
         'flag_values': '1, 2',
         'flag_meanings': 'message_without_sky_condition_data message_with_sky_condition_data'
     })
     write_var('message_subclass', 'i4', {
-        'long_name': 'Message subclass',
+        'long_name': 'message subclass',
     })
     write_var('detection_status', 'S1', {
-        'long_name': 'Detection status',
+        'long_name': 'detection status',
         'flag_values': '0, 1, 2, 3, 4, 5, /',
         'flag_meanings': 'no_significant_backscatter one_cloud_base_detected two_cloud_bases_detected three_cloud_bases_detected full_obscuration_determined_but_no_cloud_base_detected some_obscuration_detected_but_determined_to_be_transparent raw_data_input_to_algorithm_missing_or_suspect',
     })
     write_var('self_check', 'S1', {
-        'long_name': 'Self check',
+        'long_name': 'self check',
         'flag_values': '0, W, A',
         'flag_meanings': 'self_check_ok warning_active alarm_active',
     })
     write_var('vertical_visibility', 'i4', {
-        'long_name': 'Vertical visibility',
+        'long_name': 'vertical visibility',
         'units': 'm',
     })
     write_var('cbh_1', 'i4', {
-        'long_name': 'Lowest cloud base height',
+        'long_name': 'lowest cloud base height',
         'units': 'm',
     })
     write_var('cbh_2', 'i4', {
-        'long_name': 'Second lowest cloud base height',
+        'long_name': 'second lowest cloud base height',
         'units': 'm',
     })
     write_var('cbh_3', 'i4', {
-        'long_name': 'Highest cloud base height',
+        'long_name': 'highest cloud base height',
         'units': 'm',
     })
     write_var('highest_signal', 'i4', {
-        'long_name': 'Highest signal detected',
+        'long_name': 'highest signal detected',
     })
     write_var('status_alarm', 'i4', {
-        'long_name': 'Status alarm',
+        'long_name': 'status alarm',
+        'flag_masks': \
+            [0x80, 0x40, 0x20, 0x10] \
+            if id_ == b'CT' \
+            else [0x8000, 0x4000, 0x2000, 0x1000, 0x0400, 0x0200, 0x0100],
+        'flag_meanings': \
+            'laser_temperature_shut-off laser_failure receiver_failure voltage_failure'
+            if id_ == b'CT' \
+            else 'transmitter_shut-off transmitter_failure receiver_failure voltage_failure memory_error light_path_obstruction receiver_saturation',
     })
     write_var('status_warning', 'i4', {
-        'long_name': 'Status warning',
-        'units': 'degree_Celsius',
+        'long_name': 'status warning',
+        'flag_masks': \
+            [0x800, 0x400, 0x200, 0x100, 0x080, 0x040, 0x020, 0x010, 0x008] \
+            if id_ == b'CT' \
+            else [0x8000, 0x4000, 0x2000, 0x1000, 0x0800, 0x0100, 0x0080, 0x0040, 0x0020, 0x0010, 0x0008, 0x0004, 0x0002],
+        'flag_meanings': 'window_contamination battery_low laser_power_low laser_temperature_high_or_low internal_temperature_high_or_low voltage_high_or_low relative_humidity_>_85% receiver_optical_cross-talk_compensation_poor blower_suspect' \
+            if id_ == b'CT' \
+            else 'window_contamination battery_voltage_low transmitter_expires high_humidity blower_failure humidity_sensor_failure heater_fault high_background_radiance ceilometer_engine_board_failure battery_failure laser_monitor_failure receiver_warning tilt_angle_>_45_degrees_warning',
     })
     write_var('status_internal', 'i4', {
-        'long_name': 'Status internal',
+        'long_name': 'status internal',
+        'flag_masks': \
+            [0x800, 0x400, 0x200, 0x100, 0x080, 0x040, 0x020, 0x010, 0x008, 0x004, 0x002] \
+            if id_ == b'CT' \
+            else [0x8000, 0x4000, 0x2000, 0x1000, 0x0800, 0x0400, 0x0200, 0x0080, 0x0040, 0x0020],
+        'flag_meanings': \
+            'blower_is_on blower_heater_is_on internal_heater_is_on units_are_meters_if_on_else_feet polling_mode_is_on working_from_battery single_sequence_mode_is_on manual_settings_are_effective tilt_angle_>_45_degrees high_background_radiance manual_blower_control' \
+            if id_ == b'CT' \
+            else 'blower_is_on blower_heater_is_on internal_heater_is_on working_from_battery standby_mode_is_on self_test_in_progress manual_data_acquisition_settings_are_effective units_are_meters_if_on_else_feet manual_blower_control polling_mode_is_on',
     })
     write_var('vertical_resolution', 'i4', {
-        'long_name': 'Vertical resolution',
+        'long_name': 'vertical resolution',
         'units': 'm',
     })
     write_var('sky_detection_status', 'i4', {
-        'long_name': 'Sky detection status',
+        'long_name': 'sky detection status',
         'flag_values': '0, 1, 2, 3, 4, 5, 6, 7, 8, 9, -1, 99',
         'flag_meanings': '0_octas 1_octas 2_octas 3_octas 4_octas 5_octas 6_octas 7_octas 8_octas vertical_visibility data_missing not_enough_data',
-        'comment': 'Sky detection algorithm',
+    })
+    write_var('measurement_mode', 'S1', {
+        'long_name': 'measurement mode',
+        'flag_values': 'N, C',
+        'flag_meanings': 'normal close_range'
+    })
+    write_var('receiver_sensitivity', 'i4', {
+        'long_name': 'receiver sensitivity',
+        'units': '%',
+        'comment': 'percentage of nominal factory setting',
+    })
+    write_var('window_contamination', 'i4', {
+        'long_name': 'window contamination',
+        'units': 'millivolt',
+        'comment': 'millivolts at internal ADC input',
+        'valid_range': [0, 2500],
+    })
+    write_var('sampling', 'i4', {
+        'long_name': 'sampling',
+        'units': 'Hz',
     })
     write_var('pulse_energy', 'i4', {
-        'long_name': 'Pulse energy',
-        'units': 'percent',
-        'comment': 'Percentage of nominal factory setting',
+        'long_name': 'pulse energy',
+        'units': '%',
+        'comment': 'percentage of nominal factory setting',
     })
     write_var('laser_temperature', 'i4', {
-        'long_name': 'Laser temperature',
+        'long_name': 'laser temperature',
         'units': 'degree_Celsius',
     })
     write_var('window_transmission', 'i4', {
-        'long_name': 'Window transmission estimate',
-        'units': 'percent',
+        'long_name': 'window transmission estimate',
+        'units': '%',
         'comment': '90% to 100% means the window is clean',
     })
     write_var('tilt_angle', 'i4', {
-        'long_name': 'Tilt angle',
-        'units': 'degrees',
+        'long_name': 'tilt angle',
+        'units': 'degree',
     })
     write_var('background_light', 'i4', {
         'long_name': 'Background light',
         'units': 'millivolt',
-        'comment': 'Millivolts at internal ADC input',
+        'comment': 'millivolts at internal ADC input',
+        'valid_range': [0, 2500],
     })
     write_var('pulse_length', 'S1', {
-        'long_name': 'Pulse length',
-        'flag_names': 'L, S',
+        'long_name': 'pulse length',
+        'flag_values': 'L, S',
         'flag_meanings': 'long short'
     })
     write_var('pulse_count', 'i4', {
-        'long_name': 'Pulse count',
-        'comment': 'Number of pulses during a single measurement cycle',
+        'long_name': 'pulse count',
+        'comment': 'number of pulses during a single measurement cycle',
     })
     write_var('receiver_gain', 'S1', {
-        'long_name': 'Receiver gain',
+        'long_name': 'receiver gain',
         'flag_values': 'H, L',
         'flag_meanings': 'high low',
-        'comment': 'High by default, may be low in fog or heavy snow',
+        'comment': 'high by default, may be low in fog or heavy snow',
     })
     write_var('receiver_bandwidth', 'S1', {
         'long_name': 'Receiver bandwidth',
@@ -652,25 +756,25 @@ def write_output(dd, filename):
         'flag_meanings': 'narrow wide'
     })
     write_var('backscatter_sum', 'f4', {
-        'long_name': 'Backscatter sum',
+        'long_name': 'backscatter sum',
         'units': 'sr^-1',
-        'comment': 'Sum of detected and normalized backscatter',
+        'comment': 'sum of detected and normalized backscatter',
     })
     write_var('ceilometer', 'SX', {
-        'long_name': 'Ceilometer name',
+        'long_name': 'ceilometer name',
     })
     write_var('period', 'i4', {
-        'long_name': 'Period',
+        'long_name': 'period',
     })
     write_layer('layer_height', 'i4', {
-        'long_name': 'Layer height',
+        'long_name': 'layer height',
         'units': 'm',
-        'comment': 'Sky condition algorithm',
+        'comment': 'sky condition algorithm',
     })
     write_layer('layer_cloud_amount', 'i4', {
-        'long_name': 'Layer cloud amount',
+        'long_name': 'layer cloud amount',
         'units': 'octas',
-        'comment': 'Sky condition algorithm',
+        'comment': 'sky condition algorithm',
     })
 
     f.software = 'cl2nc (https://github.com/peterkuma/cl2nc)'

@@ -1,7 +1,7 @@
 # cl2nc
 
 cl2nc is an open source command line Python program for converting Vaisala
-CL51 and CL31 ceilometer DAT and HIS L2 files to NetCDF.
+CL51, CL31 and CT25K ceilometer DAT and HIS L2 files to NetCDF.
 
 ## Example
 
@@ -11,8 +11,8 @@ On the command-line:
 cl2nc input.dat output.nc
 ```
 
-where `input.dat` is a Vaisala CL51 or CL31 DAT file and `output.nc` is the name
-of a NetCDF output file.
+where `input.dat` is a Vaisala CL51, CL31 or CT25K DAT file and `output.nc` is
+the name of a NetCDF output file.
 
 See [example.zip](example.zip) for an example input and output.
 
@@ -129,8 +129,8 @@ man cl2nc
 
 ## Variables
 
-Please see Vaisala CL51 User's Guide for a complete description of the
-variables.
+Please see Vaisala CL51, CL31 or CT25K User's Guide for a complete description
+of the variables.
 
 The DAT files can alternatively contain values in feet
 (instead of meters), in which case all values are converted by cl2nc to meters.
@@ -152,13 +152,14 @@ DAT files produce the following NetCDF output:
 | [cbh_2](#cbh_2) | Second lowest cloud base height | m | time |
 | [cbh_3](#cbh_3) | Highest cloud base height | m | time |
 | [detection_status](#detection_status) | Detection status | | time |
-| [sky_detection_status](#sky_detection_status) | Sky detection status | | time |
 | [highest_signal](#highest_signal) | Highest signal detected | | time |
+| [id](#id) | Ceilometer identification string | | time |
 | [laser_temperature](#laser_temperature) | Laser temperature | °C | time |
 | [layer](#layer) | Layer number | | layer |
 | [layer_cloud_amount](#layer_cloud_amount) | Layer cloud amount | octas | time, layer |
 | [layer_height](#layer_height) | Layer height | m | time, layer |
 | [level](#level) | Level number | | level |
+| [measurement_mode](#measurement_mode) (CT25K) | Measurement mode | | time |
 | [message_number](#message_number) | Message number | | time |
 | [message_subclass](#message_subclass) | Message subclass | | time |
 | [pulse_energy](#pulse_energy) | Pulse energy | % | time |
@@ -166,7 +167,10 @@ DAT files produce the following NetCDF output:
 | [pulse_count](#pulse_count) | Pulse count | | time |
 | [receiver_bandwidth](#receiver_bandwidth) | Receiver bandwidth | | time |
 | [receiver_gain](#receiver_gain) | Receiver gain | | time |
+| [receiver_sensitivity](#receiver_sensitivity) (CT25K) | Receiver sensitivity | % | time |
+| [sampling](#sampling) | Sampling | Hz | time |
 | [self_check](#self_check) | Self check | | time |
+| [sky_detection_status](#sky_detection_status) | Sky detection status | | time |
 | [software_level](#software_level) | Software level ID | | time |
 | [status_alarm](#status_alarm) | Status alarm | | time |
 | [status_internal](#status_internal) | Status internal | | time |
@@ -178,6 +182,7 @@ DAT files produce the following NetCDF output:
 | [vertical_resolution](#vertical_resolution) | Vertical resolution | m | time |
 | [vertical_visibility](#vertical_visibility) | Vertical visibility | m | time |
 | [window_transmission](#window_transmission) | Window transmission estimate | % | time |
+| [window_contamination](#window_contamination) | Window contamination | mV | time |
 
 HIS L2 files produce the following NetCDF output:
 
@@ -271,6 +276,13 @@ Sky condition algorithm.
 
 Level number
 
+### measurement_mode (CT25K)
+
+Measurement mode
+
+- N – normal
+- C – close range
+
 ### message_number
 
 Message number
@@ -320,6 +332,14 @@ Receiver gain
 
 High by default, may be low in fog or heavy snow.
 
+### receiver_sensitivity
+
+Receiver sensitivity (%)
+
+### sampling
+
+Sampling (Hz)
+
 ### self_check
 
 Self check
@@ -346,6 +366,13 @@ Flags:
 - 0x0200 – light path obstruction
 - 0x0100 – receiver saturation
 
+Flags (CT25K):
+
+- 0x80 – laser temperature shut-off
+- 0x40 – laser failure
+- 0x20 – receiver failure
+- 0x10 – voltage failure
+
 ### status_internal
 
 Status internal
@@ -362,6 +389,20 @@ Flags:
 - 0x0080 – units are meters if on, else feet (note that units are always converted to m by cl2nc)
 - 0x0040 – manual blower control
 - 0x0020 – polling mode is on
+
+Flags (CT25K):
+
+- 0x800 – blower is on
+- 0x400 – blower heater is on
+- 0x200 – internal heater is on
+- 0x100 – units are meters if on, else feet (note that units are always converted to m by cl2nc)
+- 0x080 – polling mode is on
+- 0x040 – working from battery
+- 0x020 – single sequence mode is on
+- 0x010 – manual settings are effective
+- 0x008 – tilt angle > 45°
+- 0x004 – high background radiance
+- 0x002 – manual blower control
 
 ### status_warning
 
@@ -381,7 +422,19 @@ Flags:
 - 0x0010 – battery failure
 - 0x0008 – laser monitor failure
 - 0x0004 – receiver warning
-- 0x0002 – tilt angle > 45 degrees warning
+- 0x0002 – tilt angle > 45° warning
+
+Flags (CT25K):
+
+- 0x800 – window contamination
+- 0x400 – battery low
+- 0x200 – laser power low
+- 0x100 – laser temperature high or low
+- 0x080 – internal temperature high or low
+- 0x040 – voltage high or low
+- 0x020 – relative humidity > 85% (option)
+- 0x010 – receiver optical cross-talk compensation poor
+- 0x008 – blower suspect
 
 ### tilt_angle
 
