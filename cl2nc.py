@@ -94,7 +94,7 @@ def line_time(d, s, filename=None):
     elif m2 is not None:
         g = m2.groupdict()
         time = dt.datetime(1970, 1, 1) + \
-            dt.timedelta(seconds=float(d['unix_time']))
+            dt.timedelta(seconds=float(g['unix_time']))
         d['time_utc'] = time.strftime(u'%Y-%m-%dT%H:%M:%S').encode('ascii')
     elif m3 is not None and mf is not None:
         g = m3.groupdict()
@@ -313,8 +313,8 @@ def postprocess(d):
     if 'pulse_count' in d:
         d['pulse_count'] = np.where(
             d['pulse_count'] != NA_INT32,
-            d['pulse_count']*1024 if id_ == b'CT' \
-                else 4**(d['pulse_count'] + 1),
+            4**(d['pulse_count'] + 1) if id_ == b'CT' \
+                else d['pulse_count']*1024,
             NA_INT32
         )
 
