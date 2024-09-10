@@ -1,6 +1,6 @@
 # cl2nc
 
-cl2nc is an open source command line Python program for converting Vaisala
+cl2nc is an open source command-line Python program for converting Vaisala
 CL51, CL31 and CT25K ceilometer DAT and HIS L2 files to NetCDF.
 
 ## Example
@@ -11,10 +11,12 @@ On the command-line:
 cl2nc input.dat output.nc
 ```
 
-where `input.dat` is a Vaisala CL51, CL31 or CT25K DAT file and `output.nc` is
+where `input.dat` is a Vaisala CL51, CL31, or CT25K DAT file and `output.nc` is
 the name of a NetCDF output file.
 
-See [example.zip](example.zip) for an example input and output.
+See
+[cl2nc-examples.zip](https://files.peterkuma.net/media/ttzp3npjy0/cl2nc-examples.zip)
+for examples of input and output.
 
 ## Installation
 
@@ -64,10 +66,10 @@ python3 -m pip install cl2nc
 ```
 
 Make sure that `/Users/<user>/Library/Python/<version>/bin` is included in the
-`PATH` environment variable if not already, where `<user>` is your system
-user name and `<version>` is the Python version. This path should be printed
-by the above command. This can be done by adding this line to the file
-`.zprofile` in your home directory and restart the Terminal:
+`PATH` environment variable if not already, where `<user>` is your system user
+name and `<version>` is the Python version. This path should be printed by the
+above command. This can be done by adding this line to the file `.zprofile` in
+your home directory and restart the Terminal:
 
 ```sh
 PATH="$PATH:/Users/<user>/Library/Python/<version>/bin"
@@ -102,17 +104,18 @@ pip uninstall cl2nc
 
 ## Usage
 
-cl2nc is a command line program to be run a terminal (Linux and macOS) or the
-Command Prompt (Windows).
+cl2nc is a command-line program to be run on a terminal (Linux and macOS) or
+the Command Prompt (Windows).
 
 Synopsis:
 
 `cl2nc` [`-chq`] [`--debug`] *input* *output* \
 `cl2nc` `-h`|`--help`
 
-*input* is an input `.dat` or `.his` (L2) file. *output* is an output `.nc` file.
-If directories are supplied for *input* and *output*, all `.dat`, `.DAT`, `.his`
-and `.HIS` files in *input* are converted to `.nc` files in *output*.
+*input* is an input `.dat` or `.his` (L2) file. *output* is an output `.nc`
+file.  If directories are supplied for *input* and *output*, all `.dat`,
+`.DAT`, `.his` and `.HIS` files in *input* are converted to `.nc` files in
+*output*.
 
 Options:
 
@@ -129,17 +132,17 @@ man cl2nc
 
 ## Variables
 
-Please see Vaisala CL51, CL31 or CT25K User's Guide for a complete description
+Please see Vaisala CL51, CL31, or CT25K User's Guide for a complete description
 of the variables.
 
-The DAT files can alternatively contain values in feet
-(instead of meters), in which case all values are converted by cl2nc to meters.
+The DAT files can alternatively contain values in feet (instead of meters), in
+which case all values are converted by cl2nc to meters.
 
 Time in DAT and HIS files is assumed to be UTC.
 
 Missing values are encoded as NaN (floating-point variables) or -2147483648
-(integer variables). The `_FillValue` attribute contains the missing value
-used in the given variable.
+(integer variables). The `_FillValue` attribute contains the missing value used
+in the given variable.
 
 DAT files produce the following NetCDF output:
 
@@ -245,7 +248,8 @@ Sky detection status
 
 - 0-8 – cloud coverage of the first layer in octas
 - 9 – vertical visibility
-- -1 – data missing, sky condition option not active or ceilometer in standby mode
+- -1 – data missing, sky condition option not active or ceilometer in standby
+  mode
 - 99 – not enough data (after start-up)
 
 ### highest_signal
@@ -386,7 +390,8 @@ Flags:
 - 0x0800 – standby mode is on
 - 0x0400 – self test in progress
 - 0x0200 – manual data acquisition settings are effective
-- 0x0080 – units are meters if on, else feet (note that units are always converted to m by cl2nc)
+- 0x0080 – units are meters if on, else feet (note that units are always
+  converted to m by cl2nc)
 - 0x0040 – manual blower control
 - 0x0020 – polling mode is on
 
@@ -395,7 +400,8 @@ Flags (CT25K):
 - 0x800 – blower is on
 - 0x400 – blower heater is on
 - 0x200 – internal heater is on
-- 0x100 – units are meters if on, else feet (note that units are always converted to m by cl2nc)
+- 0x100 – units are meters if on, else feet (note that units are always
+  converted to m by cl2nc)
 - 0x080 – polling mode is on
 - 0x040 – working from battery
 - 0x020 – single sequence mode is on
@@ -482,14 +488,14 @@ Time when the NetCDF file was created (ISO 8601 UTC).
 
 ## License
 
-This software is open source and can be used, shared and modified freely
-under the terms of the MIT License (see [LICENSE.md](LICENSE.md)).
+This software is open source and can be used, shared, and modified freely under
+the terms of the MIT License (see [LICENSE.md](LICENSE.md)).
 
 ## Support
 
-If you encouter any issues with cl2nc you can
-contact me at Peter Kuma <<peter@peterkuma.net>>,
-or submit a [GitHub Issue](https://github.com/peterkuma/cl2nc/issues).
+If you encounter any issues with cl2nc you can contact me at Peter Kuma
+<<peter@peterkuma.net>> or submit a [GitHub
+Issue](https://github.com/peterkuma/cl2nc/issues).
 
 ## Known issues
 
@@ -502,26 +508,31 @@ submit a [GitHub Issue](https://github.com/peterkuma/cl2nc/issues).
 
 ### cl2nc fails with an exception.
 
-Please make sure you that
-the Python package netCDF4 is installed. If it still does not work
-for you contact me: Peter Kuma <<peter@peterkuma.net>>.
-There are small variations in the .DAT file format with instruments.
-cl2nc may need to be modified to be able to read a particular type of format.
+Please make sure that the Python package netCDF4 is installed. If it still does
+not work for you, contact me: Peter Kuma <<peter@peterkuma.net>>.  There are
+small variations in the .DAT file format with instruments.  cl2nc may need to
+be modified to be able to read a particular type of format.
 
 ### Where is the height information?
 
-Height can be determined from [vertical_resolution](#vertical_resolution).
-The instrument samples vertical bins on regular intervals.
+Height can be determined from [vertical_resolution](#vertical_resolution).  The
+instrument samples vertical bins at regular intervals.
 
 ### MATLAB cannot read the time_utc variable.
 
 MATLAB NetCDF implementation currently does not support reading NC_STRING
 variables. You can use the `time` variable instead or use the MATLAB HDF
-functions to read the file (you may need to change the file extension to `.h5`).
+functions to read the file (you may need to change the file extension to
+`.h5`).
 
 ## Changelog
 
 cl2nc follows [semantic versioning](http://semver.org/).
+
+### 3.6.0 (2024-09-10)
+
+- Added support for the CT25K ceilometer.
+- Improved output metadata.
 
 ### 3.5.0 (2024-04-18)
 
@@ -537,7 +548,7 @@ cl2nc follows [semantic versioning](http://semver.org/).
 
 ### 3.3.1 (2021-03-24)
 
-- Fixed an issue of the last record in DAT files skipped.
+- Fixed an issue of the last record in DAT files being skipped.
 
 ### 3.3.0 (2020-08-27)
 
@@ -572,7 +583,8 @@ cl2nc follows [semantic versioning](http://semver.org/).
 ### 2.1.0 (2017-11-25)
 
 - Fixed parsing on Windows (line endings).
-- Added support for a specific CL31 format (timestamp line instead of checksum).
+- Added support for a specific CL31 format (timestamp line instead of
+  checksum).
 
 ### 2.0.1 (2017-10-23)
 
@@ -582,11 +594,11 @@ cl2nc follows [semantic versioning](http://semver.org/).
 ### 2.0.0 (2017-10-19)
 
 - **Important:** Fixed units conversion for sky condition height data and
-    vertical resolution. In previous versions vertical_resolution is off
-    by a factor of 0.3048 if input file units is ft. layer_height is off
-    by a factor of 100 or 10 if units are ft or m, respectively.
+  vertical resolution. In previous versions, vertical_resolution is off by a
+  factor of 0.3048 if input file units are ft. layer_height is off by a factor
+  of 100 or 10 if units are ft or m, respectively.
 - Added NetCDF file attributes: `software`, `version`, `created`.
-- Format time with `T` as delimiter to conform to ISO 8601.
+- Format time with `T` as a delimiter to conform to ISO 8601.
 - Improved error handling.
 
 ## See also
