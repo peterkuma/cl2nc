@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 setup(
     name='cl2nc',
     version='3.5.0',
-    description='Convert Vaisala CL51 and CL31 DAT and HIS L2 files to NetCDF',
+    description='Convert Vaisala CL51, CL31 and CT25K DAT and HIS L2 files to NetCDF',
     author='Peter Kuma',
     author_email='peter@peterkuma.net',
     license='MIT',
@@ -18,7 +18,7 @@ setup(
         'numpy',
         'netCDF4>=1.2.9'
     ],
-    keywords=['vaisala', 'ceilometer', 'cl51', 'cl31', 'netcdf', 'lidar'],
+    keywords=['vaisala', 'ceilometer', 'cl51', 'cl31', 'ct25k', 'netcdf', 'lidar'],
     url='https://github.com/peterkuma/cl2nc',
     classifiers=[
         'Development Status :: 5 - Production/Stable',
