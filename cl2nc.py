@@ -446,24 +446,6 @@ def read_dat(filename, options={}):
                         if re_line6.match(linex):
                             line6(d, linex)
                             d['message'] += line[0:1]
-                            if 'time_utc' in d or eof:
-                                finalize(d)
-                                stage = 0
-                            else:
-                                stage = 7
-                        else:
-                            if 'time_utc' in d or eof:
-                                finalize(d)
-                                stage = 0
-                            else:
-                                stage = 7
-                            continue
-                    elif stage == 7:
-                        try: line_time(d, linex)
-                        except ValueError:
-                            finalize(d)
-                            stage = 0
-                            continue
                         finalize(d)
                         stage = 0
                     else:
