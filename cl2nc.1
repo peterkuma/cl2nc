@@ -4,12 +4,16 @@
 cl2nc \- convert Vaisala CL51 and CL31 DAT and HIS L2 files to NetCDF
 
 .SH SYNOPSIS
-.B cl2nc
-.RB [ -chq ]
+
+.SY cl2nc
+.RB [ -chqstv ]
 .RB [ --debug ]
 .RB [ --help ]
 .I input
 .I output
+.SY cl2nc
+.BR -h | --help
+.YS
 
 .SH DESCRIPTION
 
@@ -55,6 +59,17 @@ Show help message and exit.
 .TP
 .B -q
 Run quietly (suppress output).
+.TP
+.B -s
+Profile sampling rate in seconds for use with files with no timestamps.
+.TP
+.B -t
+Initial time as
+.IR year - month - day T hour : minute : second
+for use with files with no timestamps.
+.TP
+.B -v
+Show program's version number and exit.
 
 .SH EXAMPLES
 

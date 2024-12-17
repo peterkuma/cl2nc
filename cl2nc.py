@@ -35,12 +35,12 @@ re_line1 = re.compile(b'^\x01?(?P<id>CL)(?P<unit>.)(?P<software_level>\d\d\d)(?P
 re_line1ct = re.compile(b'^\x01?(?P<id>CT)(?P<unit>.)(?P<software_level>\d\d)(?P<message_number>\d)(?P<message_subclass>\d)\x02?$')
 re_line2 = re.compile(b'^(?P<detection_status>.)(?P<self_check>.) (?P<cbh_or_vertical_visibility>.{5}) (?P<cbh2_or_highest_signal>.{5}) (?P<cbh_3>.{5}) (?P<status_alarm>.{4})(?P<status_warning>.{4})(?P<status_internal>.{4})$')
 re_line2ct = re.compile(b'^(?P<detection_status>.)(?P<self_check>.) (?P<cbh_or_vertical_visibility>.{5}) (?P<cbh2_or_highest_signal>.{5}) (?P<cbh_3>.{5}) (?P<status_alarm>.{2})(?P<status_warning>.{3})(?P<status_internal>.{3})$')
-re_line3 = re.compile(b'^ (?P<sky_detection_status>..) +(?P<layer1_height>.{4}) +(?P<layer2_cloud_amount>.) +(?P<layer2_height>.{4}) +(?P<layer3_cloud_amount>.) +(?P<layer3_height>.{4}) +(?P<layer4_cloud_amount>.) +(?P<layer4_height>.{4}) +(?P<layer5_cloud_amount>.) +(?P<layer5_height>.{3,4})$')
+re_line3 = re.compile(b'^ ?(?P<sky_detection_status>.?.) +(?P<layer1_height>.{4}) +(?P<layer2_cloud_amount>.) +(?P<layer2_height>.{4}) +(?P<layer3_cloud_amount>.) +(?P<layer3_height>.{4}) +(?P<layer4_cloud_amount>.) +(?P<layer4_height>.{4}) +(?P<layer5_cloud_amount>.) +(?P<layer5_height>.{3,4})$')
 re_line3ct = re.compile(b'^(?P<scale>.{3}) (?P<measurement_mode>.) (?P<pulse_energy>...) (?P<laser_temperature>...) (?P<receiver_sensitivity>...) (?P<window_contamination>....) (?P<tilt_angle>...) (?P<background_light>.{4}) (?P<pulse_length>.)F(?P<pulse_count>.)(?P<receiver_gain>.)(?P<receiver_bandwidth>.)(?P<sampling>.) (?P<backscatter_sum>...)$')
 re_line4 = re.compile(b'^(?P<scale>.{5}) (?P<vertical_resolution>..) (?P<nsamples>.{4}) (?P<pulse_energy>...) (?P<laser_temperature>...) (?P<window_transmission>...) (?P<tilt_angle>..) (?P<background_light>.{4}) (?P<pulse_length>.)(?P<pulse_count>.{4})(?P<receiver_gain>.)(?P<receiver_bandwidth>.)(?P<sampling>..) (?P<backscatter_sum>...)$')
 re_line4ct = re.compile(b'^(?P<start_distance>...)(?P<backscatter_segment>.*)$')
 re_line5 = re.compile(b'^(?P<backscatter>.*)$')
-re_line6 = re.compile(b'^\x03(?P<checksum>.{4})\x04$')
+re_line6 = re.compile(b'^\x03?(?P<checksum>.{4})\x04?$')
 re_line20ct = re.compile(b'^\x03$')
 re_none = re.compile(b'^/* *$')
 
@@ -80,7 +80,7 @@ def line_time(d, s, filename=None):
     m1 = re_line_time_1.match(s)
     m2 = re_line_time_2.match(s)
     m3 = re_line_time_3.match(s)
-    mf = re_file_time.match(filename)
+    mf = re_file_time.match(filename) if filename is not None else None
     if m1 is not None:
         g = m1.groupdict()
         d['time_utc'] = b'%s-%s-%sT%s:%s:%s' % (
@@ -95,7 +95,7 @@ def line_time(d, s, filename=None):
         g = m2.groupdict()
         time = dt.datetime(1970, 1, 1) + \
             dt.timedelta(seconds=float(g['unix_time']))
-        d['time_utc'] = time.strftime(u'%Y-%m-%dT%H:%M:%S').encode('ascii')
+        d['time_utc'] = time.strftime('%Y-%m-%dT%H:%M:%S').encode('ascii')
     elif m3 is not None and mf is not None:
         g = m3.groupdict()
         gf = mf.groupdict()
@@ -324,12 +324,21 @@ def postprocess(d):
         else:
             d['sampling'] *= 1e6
 
-    d['time_utc'] = d.get('time_utc', '')
-    if 'time_utc' in d:
-        d['time'] = NA_INT64 if d['time_utc'] == '' else (
-            dt.datetime.strptime(d['time_utc'].decode('ascii'), '%Y-%m-%dT%H:%M:%S')
-            - dt.datetime(1970, 1, 1)
+    if 'time_utc' in d and 'time' not in d:
+        d['time'] = np.nan if d['time_utc'] == '' else (
+            dt.datetime.strptime(
+                d['time_utc'].decode('ascii'),
+                '%Y-%m-%dT%H:%M:%S'
+            ) - dt.datetime(1970, 1, 1)
         ).total_seconds()
+
+    if 'time' in d and 'time_utc' not in d:
+        d['time_utc'] = '' if np.isnan(d['time']) else (
+            dt.datetime(1970, 1, 1) + dt.timedelta(seconds=d['time'])
+        ).strftime('%Y-%m-%dT%H:%M:%S').encode('ascii')
+
+    d['time_utc'] = d.get('time_utc', '')
+    d['time'] = d.get('time', np.nan)
 
     if id_ == b'CT':
         d['vertical_resolution'] = 30
@@ -353,17 +362,25 @@ def read_dat(filename, options={}):
         d = {}
         dd = []
         stage = 0
-        line_number = 0
 
         def finalize(d):
             if options['check']: check(d)
+            if 'time_utc' not in d and 'time' not in d:
+                if len(dd) == 0 and options['time']:
+                    d['time'] = options['time']
+                elif len(dd) > 0 and \
+                    'time' in dd[-1] and \
+                    options['sampling_rate']:
+                    d['time'] = dd[-1]['time'] + options['sampling_rate']
             postprocess(d)
             if len(dd) > 0 and d['id'] != dd[0]['id']:
                 raise ValueError('Mixed ceilometer types in one input file are not supported')
             dd.append(d)
 
-        for line in f.readlines():
-            line_number += 1
+        lines = f.readlines()
+        for n, line in enumerate(lines):
+            line_number = n + 1
+            eof = line_number == len(lines)
             linex = line.rstrip()
 
             if linex == b'':
@@ -379,14 +396,11 @@ def read_dat(filename, options={}):
                 try:
                     if stage == 0:
                         d = {}
-                        if re_line_time_1.match(linex) or \
-                            re_line_time_2.match(linex) or \
-                            re_line_time_3.match(linex):
-                            line_time(d, linex, filename)
-                            stage = 1
-                        else:
+                        try: line_time(d, linex, filename)
+                        except ValueError:
                             stage = 1
                             continue
+                        stage = 1
                     elif stage == 1:
                         line1(d, linex)
                         d['message'] = line[1:]
@@ -432,20 +446,24 @@ def read_dat(filename, options={}):
                         if re_line6.match(linex):
                             line6(d, linex)
                             d['message'] += line[0:1]
-                            if 'time_utc' in d:
+                            if 'time_utc' in d or eof:
                                 finalize(d)
                                 stage = 0
                             else:
                                 stage = 7
                         else:
-                            if 'time_utc' in d:
+                            if 'time_utc' in d or eof:
                                 finalize(d)
                                 stage = 0
                             else:
                                 stage = 7
                             continue
                     elif stage == 7:
-                        line_time(d, linex)
+                        try: line_time(d, linex)
+                        except ValueError:
+                            finalize(d)
+                            stage = 0
+                            continue
                         finalize(d)
                         stage = 0
                     else:
@@ -487,10 +505,9 @@ def read_his_backscatter(d, s):
 def read_his(filename, options={}):
     with open(filename, 'rb') as f:
         dd = []
-        line_number = 0
         header = None
-        for line in f.readlines():
-            line_number += 1
+        for n, line in enumerate(f.readlines()):
+            line_number = n + 1
             try:
                 d = {}
                 items = line.split(b',')
@@ -590,7 +607,7 @@ def write_output(dd, filename):
         'standard_name': 'time',
         'units': 'ISO 8601',
     })
-    write_var('time', 'i8', {
+    write_var('time', 'f8', {
         'long_name': 'Time',
         'standard_name': 'time',
         'units': 'seconds since 1970-01-01 00:00:00 UTC',
@@ -783,8 +800,29 @@ def write_output(dd, filename):
 
     f.close()
 
+def parse_iso_time(s):
+    if s is None: return None
+    try:
+        return (
+            dt.datetime.strptime(s, '%Y-%m-%dT%H:%M:%S')
+            - dt.datetime(1970, 1, 1)
+        ).total_seconds()
+    except ValueError:
+        log.warning('Invalid time format "%s"' % s)
+
+def parse_float(s):
+    if s is None: return None
+    try:
+        return float(s)
+    except ValueError:
+        log.warning('Invalid floating-point format "%s"' % s)
+
 def main():
     parser = argparse.ArgumentParser(description='Convert Vaisala CL51 and CL31 DAT and HIS L2 files to NetCDF')
+    parser.add_argument('-v',
+        action='version',
+        version='%(prog)s ' +  __version__
+    )
     parser.add_argument('-c',
         dest='check',
         action='store_true',
@@ -800,6 +838,14 @@ def main():
         action='store_true',
         help='print debugging information',
     )
+    parser.add_argument('-t',
+        dest='time',
+        help='initial time as <year>-<month>-<day>T<hour>:<minute>:<second> for use with files with no timestamps',
+    )
+    parser.add_argument('-s',
+        dest='sampling_rate',
+        help='profile sampling rate in seconds for use with files with no timestamps',
+    )
     parser.add_argument('input', help='input file')
     parser.add_argument('output', help='output file')
     args = parser.parse_args()
@@ -809,6 +855,12 @@ def main():
 
     input_ = fsencode(args.input)
     output = fsencode(args.output)
+
+    options = {
+        'check': args.check,
+        'time': parse_iso_time(args.time),
+        'sampling_rate': parse_float(args.sampling_rate),
+    }
 
     if os.path.isdir(input_):
         for file_ in sorted([fsencode(x) for x in os.listdir(input_)]):
@@ -823,7 +875,7 @@ def main():
             if not args.quiet:
                 print(fsdecode(input_filename))
             try:
-                dd = read(input_filename, {'check': args.check})
+                dd = read(input_filename, options)
                 if len(dd) > 0:
                     write_output(dd, output_filename)
                 else:
@@ -833,7 +885,7 @@ def main():
                 log.debug(traceback.format_exc())
     else:
         try:
-            dd = read(input_, {'check': args.check})
+            dd = read(input_, options)
             if len(dd) > 0:
                 write_output(dd, output)
             else:

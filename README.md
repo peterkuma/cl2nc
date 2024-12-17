@@ -109,7 +109,7 @@ the Command Prompt (Windows).
 
 Synopsis:
 
-`cl2nc` [`-chq`] [`--debug`] *input* *output* \
+`cl2nc` [`-chqstv`] [`--debug`] *input* *output* \
 `cl2nc` `-h`|`--help`
 
 *input* is an input `.dat` or `.his` (L2) file. *output* is an output `.nc`
@@ -123,6 +123,10 @@ Options:
 - `--debug`: Enable debugging output.
 - `-h`, `--help`: Show help message and exit.
 - `-q`: Run quietly (suppress output).
+- `-s`: Profile sampling rate in seconds for use with files with no timestamps.
+- `-t`: Initial time as *year*-*month*-*day*T*hour*:*minute*:*second* for use
+  with files with no timestamps.
+- `-v`: Show program's version number and exit.
 
 On Linux and macOS, see also the manual page with:
 
