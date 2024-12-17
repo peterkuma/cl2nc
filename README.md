@@ -533,6 +533,14 @@ functions to read the file (you may need to change the file extension to
 
 cl2nc follows [semantic versioning](http://semver.org/).
 
+### 3.7.0 (2024-12-17)
+
+- Support for files without timestamps. Time can be set defined by setting the
+  initial time with `-t` and a sampling interval with `-s`.
+- Support for a CL51 file format where the checksum line has no special
+  characters, and space at the beginning of the "line 3" format is trimmed.
+- New option `-v` for printing version.
+
 ### 3.6.0 (2024-09-10)
 
 - Added support for the CT25K ceilometer.
