@@ -533,6 +533,11 @@ functions to read the file (you may need to change the file extension to
 
 cl2nc follows [semantic versioning](http://semver.org/).
 
+### 3.7.1 (2024-12-17)
+
+- Remove support for processing of records with a timestamp at the end of the
+  record.
+
 ### 3.7.0 (2024-12-17)
 
 - Support for files without timestamps. Time can be set defined by setting the
