@@ -533,6 +533,11 @@ functions to read the file (you may need to change the file extension to
 
 cl2nc follows [semantic versioning](http://semver.org/).
 
+### 3.8.0 (2025-02-05)
+
+- Make processing more flexible by allowing Unicode replacement characters
+  instead of the ASCII characters 0x01-0x04 and shorter line 3 blocks.
+
 ### 3.7.1 (2024-12-17)
 
 - Remove support for processing of records with a timestamp at the end of the
