@@ -20,7 +20,6 @@ setup(
     ],
     keywords=['vaisala', 'ceilometer', 'cl51', 'cl31', 'ct25k', 'netcdf', 'lidar'],
     url='https://github.com/peterkuma/cl2nc',
-    license='MIT',
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Environment :: Console',
