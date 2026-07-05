@@ -533,6 +533,10 @@ functions to read the file (you may need to change the file extension to
 
 cl2nc follows [semantic versioning](http://semver.org/).
 
+### 3.8.1 (2026-07-05)
+
+- Fix deprecation warnings in new versions of Python (3.14).
+
 ### 3.8.0 (2025-02-05)
 
 - Make processing more flexible by allowing Unicode replacement characters
