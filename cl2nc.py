@@ -778,7 +778,7 @@ def write_output(dd, filename):
 
     f.software = 'cl2nc (https://github.com/peterkuma/cl2nc)'
     f.version = __version__
-    f.created = dt.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
+    f.created = dt.datetime.now(dt.UTC).strftime('%Y-%m-%dT%H:%M:%SZ')
 
     f.close()
 
